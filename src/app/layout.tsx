@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     default: "yields.to",
     template: "%s | yields.to",
   },
-  description: "Discover the Best Yields on Plasma.",
+  description: "Find the best yields on Plasma.",
   keywords: [
     "Plasma chain",
     "DeFi yields",
