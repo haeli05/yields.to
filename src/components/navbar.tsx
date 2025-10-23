@@ -12,12 +12,12 @@ export function Navbar() {
           <Image
             src="/logo.png"
             alt="Yields.to"
-            width={36}
-            height={36}
+            width={28}
+            height={28}
             priority
-            className="h-auto w-auto"
+            className="h-7 w-7"
           />
-          <span className="text-xl font-semibold tracking-tight">
+          <span className="hidden text-xl font-semibold tracking-tight lg:inline">
             Yields.to
           </span>
         </Link>
