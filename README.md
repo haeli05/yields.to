@@ -94,6 +94,25 @@ Schedule: 0 * * * *  (every hour)
 
 The UI reads from Supabase when configured; if unavailable it falls back to the public APIs.
 
+### Sumcap Plasma API ingestion
+
+Endpoint: `GET /api/sumcap/sync`
+
+- Pulls JSON from `https://api-plasma.sumcap.xyz` across key endpoints (see OpenAPI `/openapi.json`) and stores raw payloads in `sumcap_snapshots` with the current hour timestamp.
+- Protected by `AGGREGATOR_SECRET` (header `x-cron-secret` or `?secret=` param).
+
+DB table (created by `supabase/schema.sql`):
+- `sumcap_snapshots(ts timestamptz, endpoint text, status int, ok bool, payload jsonb, updated_at timestamptz)`
+
+Cron example (hourly):
+
+```
+Path: /api/sumcap/sync
+Method: GET
+Headers: x-cron-secret: ${AGGREGATOR_SECRET}
+Schedule: 0 * * * *
+```
+
 ### KV caching (Vercel KV / Upstash Redis)
 
 To avoid Next.js data cache limits and reduce upstream calls, `/api/yields/plasma` caches the trimmed (top 50) Plasma yields in KV for 15 minutes. If KV is not configured, an in-memory fallback is used.

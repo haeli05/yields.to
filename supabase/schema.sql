@@ -52,3 +52,18 @@ create table if not exists public.source_health (
 );
 
 create index if not exists idx_source_health_checked_at on public.source_health (checked_at desc);
+
+-- Sumcap Plasma API snapshots (raw JSON per endpoint)
+create table if not exists public.sumcap_snapshots (
+  id bigserial primary key,
+  ts timestamptz not null,
+  endpoint text not null,
+  status int,
+  ok boolean not null default false,
+  payload jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now(),
+  unique (ts, endpoint)
+);
+
+create index if not exists idx_sumcap_snapshots_ts_desc on public.sumcap_snapshots (ts desc);
+create index if not exists idx_sumcap_snapshots_endpoint on public.sumcap_snapshots (endpoint);
