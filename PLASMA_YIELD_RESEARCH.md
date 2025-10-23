@@ -7,6 +7,84 @@
 
 This document contains comprehensive research on major yield sources available on the Plasma blockchain, focusing on integration opportunities for the yields.to platform. Plasma is a stablecoin-focused Layer 1 blockchain that launched its mainnet on September 25, 2025, debuting with over $2 billion in stablecoin TVL.
 
+**👉 For immediate implementation instructions, see [API_INTEGRATION_GUIDE.md](./API_INTEGRATION_GUIDE.md) - Complete with code examples and step-by-step instructions.**
+
+---
+
+## Quick Start: How to Get the Data
+
+### Primary Data Source: DeFiLlama Yields API (Recommended)
+
+**Why DeFiLlama First:**
+- ✅ Already integrated in your codebase (`src/app/dashboard/page.tsx`)
+- ✅ Aggregates data from ALL protocols (Maple, Pendle, Ethena, Lithos, Aave, Fluid)
+- ✅ Free, no authentication required
+- ✅ Hourly updates
+- ✅ Consistent data format
+
+**Endpoint:**
+```
+GET https://yields.llama.fi/pools?chain=Plasma
+```
+
+**Quick Code Example:**
+```typescript
+// Fetch all Plasma yields
+const response = await fetch('https://yields.llama.fi/pools?chain=Plasma');
+const data = await response.json();
+const plasmaYields = data.data; // Array of yield pools
+
+// Filter by protocol
+const mapleYields = plasmaYields.filter(p => p.project.includes('maple'));
+const pendleYields = plasmaYields.filter(p => p.project.includes('pendle'));
+const ethenaYields = plasmaYields.filter(p => p.symbol.includes('USDe'));
+const lithosYields = plasmaYields.filter(p => p.project.includes('lithos'));
+```
+
+**Response Structure:**
+```typescript
+{
+  data: [
+    {
+      chain: "Plasma",
+      project: "maple-finance",      // Protocol name
+      symbol: "syrupUSDT",            // Pool name
+      tvlUsd: 200000000,              // $200M TVL
+      apy: 7.5,                       // Total APY
+      apyBase: 6.5,                   // Base APY (organic)
+      apyReward: 1.0,                 // Reward APY (token incentives)
+      pool: "0x...",                  // Pool address
+      rewardTokens: ["0x..."],        // XPL, ENA, LITH, etc.
+      underlyingTokens: ["0x..."]     // USDT, USDC, etc.
+    },
+    // ... more pools
+  ]
+}
+```
+
+### Protocol-Specific APIs (Optional Secondary Sources)
+
+| Protocol | When to Use | Endpoint | Documentation |
+|----------|-------------|----------|---------------|
+| **Pendle Finance** | For PT/YT market details, historical APY charts | `https://api-v2.pendle.finance/core` | See [API_INTEGRATION_GUIDE.md](./API_INTEGRATION_GUIDE.md#3-pendle-finance-api) |
+| **Ethena Labs** | For sUSDe exchange rate, staking stats | `https://public.api.ethena.fi` | See [API_INTEGRATION_GUIDE.md](./API_INTEGRATION_GUIDE.md#4-ethena-labs-api) |
+| **Maple Finance** | For vault-specific data (rarely needed) | The Graph subgraphs | See [API_INTEGRATION_GUIDE.md](./API_INTEGRATION_GUIDE.md#2-maple-finance-data) |
+| **Lithos Protocol** | On-chain DEX data (if not in DeFiLlama) | The Graph subgraphs | See [API_INTEGRATION_GUIDE.md](./API_INTEGRATION_GUIDE.md#5-lithos-protocol) |
+
+**Recommendation:** Start with DeFiLlama only. Add protocol-specific APIs later if you need additional metadata not available in DeFiLlama.
+
+### Implementation Checklist
+
+- [x] **Step 1:** DeFiLlama API already integrated in `src/app/dashboard/page.tsx`
+- [ ] **Step 2:** Add protocol name filters (Maple, Pendle, Ethena, Lithos)
+- [ ] **Step 3:** Display `apyBase` and `apyReward` separately
+- [ ] **Step 4:** Show reward tokens (XPL, ENA, LITH badges)
+- [ ] **Step 5:** Create protocol-specific pages `/maple-yields`, `/pendle-yields`, etc.
+- [ ] **Step 6:** Add Pendle API for detailed PT/YT market data
+- [ ] **Step 7:** Implement historical APY charts
+
+**Full implementation guide with code examples:** [API_INTEGRATION_GUIDE.md](./API_INTEGRATION_GUIDE.md)
+
 ---
 
 ## 1. Maple Finance - syrupUSDT/syrupUSDC
