@@ -52,26 +52,33 @@ export const metadata: Metadata = {
 };
 
 export default async function DashboardPage() {
-  const response = await fetch("/api/yields/plasma", { cache: "no-store" });
-
-  if (!response.ok) {
-    throw new Error("Unable to load Plasma yield data.");
+  let apiData: YieldApiResponse["data"] = [];
+  try {
+    const response = await fetch(`/api/yields/plasma`, { cache: "no-store" });
+    if (response.ok) {
+      const json = (await response.json()) as YieldApiResponse;
+      apiData = json.data ?? [];
+    }
+  } catch {
+    // swallow and show empty dataset
   }
 
-  const json = (await response.json()) as YieldApiResponse;
-  const pools = (json.data ?? [])
+  const pools = (apiData ?? [])
     .filter((pool) => pool.chain === "Plasma")
     .map<DashboardPool>((pool) => {
-      const assets = detectAssets(pool.symbol, pool.project);
+      const project = pool.project || "Unknown";
+      const symbol = pool.symbol || "—";
+      const id = pool.pool || `${project}:${symbol}`;
+      const assets = detectAssets(symbol, project);
       return {
-        id: pool.pool,
-        pool: pool.pool,
-        project: pool.project,
-        symbol: pool.symbol,
-        tvlUsd: pool.tvlUsd,
-        apy: pool.apy,
+        id,
+        pool: pool.pool || project,
+        project,
+        symbol,
+        tvlUsd: pool.tvlUsd ?? 0,
+        apy: pool.apy ?? null,
         apyPct30d: pool.apyPct30D ?? null,
-        category: detectCategory(pool.project),
+        category: detectCategory(project),
         assets,
       };
     })
