@@ -52,12 +52,10 @@ export const metadata: Metadata = {
 };
 
 export default async function DashboardPage() {
-  const response = await fetch("https://yields.llama.fi/pools?chain=Plasma", {
-    next: { revalidate: 60 * 30 },
-  });
+  const response = await fetch("/api/yields/plasma", { cache: "no-store" });
 
   if (!response.ok) {
-    throw new Error("Unable to fetch Plasma yield data from DeFiLlama.");
+    throw new Error("Unable to load Plasma yield data.");
   }
 
   const json = (await response.json()) as YieldApiResponse;

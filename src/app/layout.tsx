@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/react";
+import Script from "next/script";
 import "./globals.css";
 
 import { Navbar } from "@/components/navbar";
@@ -14,13 +16,27 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "yields.to",
+  url: "https://yields.to",
+  description: "Find the best yields on Plasma",
+  inLanguage: "en-US",
+  publisher: {
+    "@type": "Organization",
+    name: "yields.to",
+    url: "https://yields.to",
+  },
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://yields.to"),
   title: {
     default: "yields.to",
     template: "%s | yields.to",
   },
-  description: "Find the best yields on Plasma.",
+  description: "Find the best yields on Plasma",
   keywords: [
     "Plasma chain",
     "DeFi yields",
@@ -28,6 +44,14 @@ export const metadata: Metadata = {
     "restaking",
     "onchain analytics",
   ],
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  category: "Finance",
   openGraph: {
     title: "yields.to · Plasma yield discovery",
     description:
@@ -36,12 +60,21 @@ export const metadata: Metadata = {
     siteName: "yields.to",
     locale: "en_US",
     type: "website",
+    images: [
+      {
+        url: "https://yields.to/logo.png",
+        width: 746,
+        height: 635,
+        alt: "yields.to logo",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "yields.to · Plasma yield discovery",
     description:
       "Actionable yield intelligence for builders and funds operating on the Plasma chain.",
+    images: ["https://yields.to/logo.png"],
   },
 };
 
@@ -55,6 +88,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <Script
+          id="site-structured-data"
+          type="application/ld+json"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
         <div className="flex min-h-screen flex-col bg-background text-foreground">
           <Navbar />
           <div className="flex-1">{children}</div>
@@ -72,6 +111,7 @@ export default function RootLayout({
             </div>
           </footer>
         </div>
+        <Analytics />
       </body>
     </html>
   );

@@ -68,6 +68,76 @@ Follow-up ideas:
 Deploy the app with any platform that supports Next.js (Vercel, Netlify, etc.).  
 The default configuration targets Node.js 18+ and includes metadata for the yields.to domain.
 
+### Supabase hourly aggregation
+
+This project can aggregate upstream Plasma data hourly and serve it from Supabase to avoid hammering public APIs.
+
+1) Create a Supabase project and run the schema in `supabase/schema.sql`.
+
+2) Configure env vars (Vercel or local `.env`):
+
+```
+SUPABASE_URL=...
+SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+AGGREGATOR_SECRET=long-random-string
+```
+
+3) Schedule the hourly sync (Vercel Cron example):
+
+```
+Path: /api/aggregate/sync
+Method: GET
+Headers: x-cron-secret: ${AGGREGATOR_SECRET}
+Schedule: 0 * * * *  (every hour)
+```
+
+The UI reads from Supabase when configured; if unavailable it falls back to the public APIs.
+
+### KV caching (Vercel KV / Upstash Redis)
+
+To avoid Next.js data cache limits and reduce upstream calls, `/api/yields/plasma` caches the trimmed (top 50) Plasma yields in KV for 15 minutes. If KV is not configured, an in-memory fallback is used.
+
+Set one of the following (Vercel KV or Upstash REST):
+
+```
+KV_REST_API_URL=...
+KV_REST_API_TOKEN=...
+# or
+UPSTASH_REDIS_REST_URL=...
+UPSTASH_REDIS_REST_TOKEN=...
+```
+
+Keys used:
+- `defillama:plasma:yields:top50:v1` – trimmed yields list (15m TTL)
+- `stablewatch:plasma:pools:v1` – cached Stablewatch scrape (10m TTL)
+
+### Stablewatch scraper
+
+Endpoint: `GET /api/sources/stablewatch`
+
+- Attempts to scrape `https://plasma.stablewatch.io/` and heuristically extract embedded pool JSON from the app bundle. Results are cached in KV for 10 minutes to be polite.
+- Force refresh: `?refresh=1`
+- Optional TTL override: `?ttl=600` (in seconds)
+
+Notes:
+- Stablewatch does not expose a public JSON API; structure may change. The scraper is defensive: if it cannot find embedded data, it returns an empty array and still caches the result briefly to avoid hammering.
+
+### Source health checks
+
+Endpoint: `GET /api/sources/health`
+
+- Pings primary providers (DeFiLlama chain/protocol/yields, Stablewatch UI, Merkl, Ethena, Pendle) and records results in `source_health` when `SUPABASE_SERVICE_ROLE_KEY` is configured.
+- Useful for monitoring upstream availability and whether a provider exposes a usable public API for Plasma.
+
+Optional cron schedule (daily):
+
+```
+Path: /api/sources/health
+Method: GET
+Schedule: 0 3 * * *
+```
+
 [^stablewatch]: https://plasma.stablewatch.io/
 [^defillama-api]: https://api.llama.fi/protocol/plasma-saving-vaults
 [^plasma-doc-analytics]: https://docs.plasma.to/docs/plasma-chain/tools/analytics

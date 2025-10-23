@@ -99,44 +99,83 @@ const unixToDate = (value: number | string | undefined) => {
 };
 
 export default async function DataSourcesPage() {
-  const [chainRes, protocolRes, yieldsRes] = await Promise.all([
-    fetch("https://api.llama.fi/charts/Plasma", {
-      next: { revalidate: 60 * 30 },
-    }),
-    fetch("https://api.llama.fi/protocol/plasma-saving-vaults", {
-      next: { revalidate: 60 * 30 },
-    }),
-    fetch("https://yields.llama.fi/pools?chain=Plasma", {
-      next: { revalidate: 60 * 30 },
-    }),
-  ]);
+  // Prefer Supabase hourly snapshot; gracefully fallback to upstream
+  let latestChainTvl = 0;
+  let chainDailyChange = 0;
+  let latestChainDate: number | string | undefined;
+  let latestProtocolTvl = 0;
+  let latestProtocolDate: number | string | undefined;
+  let topPools: YieldPool[] = [];
 
-  if (!chainRes.ok || !protocolRes.ok || !yieldsRes.ok) {
-    throw new Error("Unable to load DeFiLlama data for Plasma.");
+  try {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseAnon = process.env.SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseAnon) throw new Error("Supabase not configured");
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(supabaseUrl, supabaseAnon, {
+      auth: { persistSession: false },
+    });
+    const { data, error } = await supabase
+      .from("plasma_aggregate")
+      .select(
+        "ts, chain_latest_tvl_usd, chain_prev_tvl_usd, chain_last_date, protocol_latest_tvl_usd, protocol_last_date, top_pools"
+      )
+      .order("ts", { ascending: false })
+      .limit(1);
+    if (error) throw error;
+    const row: any | undefined = data?.[0];
+    if (!row) throw new Error("No snapshot yet");
+    latestChainTvl = row.chain_latest_tvl_usd ?? 0;
+    chainDailyChange = (row.chain_latest_tvl_usd ?? 0) - (row.chain_prev_tvl_usd ?? 0);
+    latestChainDate = row.chain_last_date ?? undefined;
+    latestProtocolTvl = row.protocol_latest_tvl_usd ?? 0;
+    latestProtocolDate = row.protocol_last_date ?? undefined;
+    topPools = (row.top_pools as YieldPool[])?.slice(0, 10) ?? [];
+  } catch {
+    const [chainRes, protocolRes, yieldsRes] = await Promise.all([
+      fetch("https://api.llama.fi/charts/Plasma", {
+        next: { revalidate: 60 * 30 },
+      }),
+      fetch("https://api.llama.fi/protocol/plasma-saving-vaults", {
+        next: { revalidate: 60 * 30 },
+      }),
+      // Prefer our trimmed + cached KV-backed endpoint to avoid large cache sizes
+      fetch("/api/yields/plasma", { cache: "no-store" }),
+    ]);
+
+    if (!chainRes.ok || !protocolRes.ok || !yieldsRes.ok) {
+      throw new Error("Unable to load Plasma data.");
+    }
+
+    const chainData = (await chainRes.json()) as ChartPoint[];
+    const protocolData = (await protocolRes.json()) as ProtocolResponse;
+    const yieldsData = (await yieldsRes.json()) as { data?: YieldPool[] };
+
+    const latestChain = chainData.at(-1);
+    const previousChain = chainData.at(-2);
+    latestChainTvl = latestChain?.totalLiquidityUSD ?? 0;
+    chainDailyChange =
+      latestChain && previousChain
+        ? latestChain.totalLiquidityUSD - previousChain.totalLiquidityUSD
+        : 0;
+    latestChainDate = latestChain?.date ?? undefined;
+
+    const plasmaTvl = protocolData.chainTvls?.Plasma as
+      | { tvl?: ChartPoint[] }
+      | ChartPoint[]
+      | undefined;
+    const protocolTvlSeries: ChartPoint[] = Array.isArray(plasmaTvl)
+      ? plasmaTvl
+      : plasmaTvl?.tvl ?? [];
+    latestProtocolTvl =
+      protocolTvlSeries.at(-1)?.totalLiquidityUSD ?? 0;
+    latestProtocolDate = protocolTvlSeries.at(-1)?.date ?? undefined;
+
+    topPools = (yieldsData.data ?? [])
+      .filter((pool) => pool.chain === "Plasma")
+      .sort((a, b) => b.tvlUsd - a.tvlUsd)
+      .slice(0, 10);
   }
-
-  const chainData = (await chainRes.json()) as ChartPoint[];
-  const protocolData = (await protocolRes.json()) as ProtocolResponse;
-  const yieldsData = (await yieldsRes.json()) as { data?: YieldPool[] };
-
-  const latestChain = chainData.at(-1);
-  const previousChain = chainData.at(-2);
-  const latestChainTvl = latestChain?.totalLiquidityUSD ?? 0;
-  const chainDailyChange =
-    latestChain && previousChain
-      ? latestChain.totalLiquidityUSD - previousChain.totalLiquidityUSD
-      : 0;
-
-  const plasmaTvl = protocolData.chainTvls?.Plasma;
-  const protocolTvlSeries: ChartPoint[] = Array.isArray(plasmaTvl)
-    ? plasmaTvl
-    : plasmaTvl?.tvl ?? [];
-  const latestProtocolTvl = protocolTvlSeries.at(-1)?.totalLiquidityUSD ?? 0;
-
-  const topPools = (yieldsData.data ?? [])
-    .filter((pool) => pool.chain === "Plasma")
-    .sort((a, b) => b.tvlUsd - a.tvlUsd)
-    .slice(0, 10);
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 py-16 sm:px-10 lg:px-12">
@@ -154,7 +193,7 @@ export default async function DataSourcesPage() {
                 {formatUsd(latestChainTvl)}
               </span>
               <Badge variant="outline" className="border-dashed">
-                Updated {unixToDate(latestChain?.date)}
+                Updated {unixToDate(latestChainDate)}
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground">
@@ -183,8 +222,7 @@ export default async function DataSourcesPage() {
                 {formatUsd(latestProtocolTvl)}
               </span>
               <Badge variant="outline" className="border-dashed">
-                Updated{" "}
-                {unixToDate(protocolTvlSeries.at(-1)?.date ?? undefined)}
+                Updated {unixToDate(latestProtocolDate)}
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground">
