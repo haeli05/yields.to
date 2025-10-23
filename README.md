@@ -52,6 +52,17 @@ Follow-up ideas:
 - Backfill vault TVL from DeFiLlama on a cron to power historical charts.
 - Stand up a Goldsky or Codex subgraph targeting the Merkl distributor contracts driving the top-yield pools.
 
+### Key Plasma yield programs
+
+| Protocol | Segment | Primary data source | Observability surface | Notes |
+| --- | --- | --- | --- | --- |
+| Syrup USD vaults | Structured yield | Stablewatch Plasma Dashboard[^stablewatch] | Merkl opportunity feeds[^merkl] | High-velocity Pendle vault incentives denominated in syrupUSDT; requires combining Stablewatch UI with Merkl emissions JSON. |
+| Pendle PT-sUSDe strategies | Structured yield | Stablewatch Plasma Dashboard[^stablewatch] | Goldsky & Codex Pendle subgraphs[^plasma-doc-indexers] | Principal token yields on Ethena collateral bridged to Plasma; subgraphs expose trade, fee, and reward data for custom dashboards. |
+| Ethena sUSDe on Aave Plasma | Lending | Aave protocol subgraphs via Goldsky/Codex[^plasma-doc-indexers] | Stablewatch dashboard[^stablewatch] | Captures the dominant Plasma lending market for sUSDe; combine Aave reserve metrics with Stablewatch APY summaries. |
+| Plasma Saving Vaults | Stablecoin allocator | DeFiLlama Saving Vaults API[^defillama-api] | API + Stablewatch overview[^stablewatch] | Core onchain treasury product with historical TVL, deposit mix, and performance exposed through an open JSON endpoint. |
+| Fluid USDT markets | Lending | Stablewatch Plasma Dashboard[^stablewatch] | Goldsky/Codex indexers[^plasma-doc-indexers] | Native Plasma liquidity market; event-level data comes from indexers while Stablewatch aggregates supply/borrow APY headlines. |
+| Binance Earn Plasma USDT | Exchange distribution | Binance Earn announcement feed[^plasma-binance-article] | Binance Earn internal analytics | Exchange-native conduit into Plasma vaults; caps and incentive schedules defined by Binance’s Earn APIs. |
+
 ## Deployment
 
 Deploy the app with any platform that supports Next.js (Vercel, Netlify, etc.).  
@@ -62,3 +73,4 @@ The default configuration targets Node.js 18+ and includes metadata for the yiel
 [^plasma-doc-analytics]: https://docs.plasma.to/docs/plasma-chain/tools/analytics
 [^plasma-doc-indexers]: https://docs.plasma.to/docs/plasma-chain/tools/indexers
 [^plasma-binance-article]: https://www.plasma.to/insights/plasma-and-binance-earn
+[^merkl]: https://app.merkl.xyz/opportunities/plasma

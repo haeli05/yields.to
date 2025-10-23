@@ -17,7 +17,7 @@ export function Navbar() {
           size="default"
           className="bg-foreground text-background hover:bg-foreground/90"
         >
-          <Link href="/app">
+          <Link href="/dashboard">
             Launch dashboard
             <ArrowUpRight className="ml-2 size-4" />
           </Link>
