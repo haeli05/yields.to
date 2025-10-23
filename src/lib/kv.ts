@@ -8,6 +8,9 @@ const mem = (globalThis as any).__kvMem ?? new Map<string, CacheEntry>();
 (globalThis as any).__kvMem = mem;
 
 async function getVercelKV() {
+  if (process.env.DISABLE_KV === "1" || process.env.DISABLE_KV === "true") {
+    return null;
+  }
   try {
     // Dynamic import so local dev works without binding
     const mod = await import("@vercel/kv");
@@ -49,4 +52,3 @@ export async function kvSetJson(key: string, value: any, ttlSeconds: number) {
   }
   mem.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 });
 }
-
