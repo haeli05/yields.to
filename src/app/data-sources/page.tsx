@@ -127,8 +127,10 @@ export default async function DataSourcesPage() {
       ? latestChain.totalLiquidityUSD - previousChain.totalLiquidityUSD
       : 0;
 
-  const protocolTvlSeries =
-    protocolData.chainTvls?.Plasma?.tvl ?? protocolData.chainTvls?.Plasma ?? [];
+  const plasmaTvl = protocolData.chainTvls?.Plasma;
+  const protocolTvlSeries: ChartPoint[] = Array.isArray(plasmaTvl)
+    ? plasmaTvl
+    : plasmaTvl?.tvl ?? [];
   const latestProtocolTvl = protocolTvlSeries.at(-1)?.totalLiquidityUSD ?? 0;
 
   const topPools = (yieldsData.data ?? [])
