@@ -55,8 +55,23 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Navbar />
-        {children}
+        <div className="flex min-h-screen flex-col bg-background text-foreground">
+          <Navbar />
+          <div className="flex-1">{children}</div>
+          <footer className="border-t border-border bg-card px-6 py-8">
+            <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+              <span>© {new Date().getFullYear()} yields.to. All rights reserved.</span>
+              <a
+                href="https://x.com/yields_to"
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-foreground transition-colors hover:text-primary"
+              >
+                Follow us on X @yields_to
+              </a>
+            </div>
+          </footer>
+        </div>
       </body>
     </html>
   );

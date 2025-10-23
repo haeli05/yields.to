@@ -232,7 +232,7 @@ export default function Home() {
                   size="lg"
                   className="min-w-[13rem] bg-white text-black hover:bg-white/90 shadow-xl"
                 >
-                  <Link href="/app">
+                  <Link href="/dashboard">
                     Launch dashboard
                     <ArrowUpRight className="ml-2 size-4" />
                   </Link>
