@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+import { Navbar } from "@/components/navbar";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -18,7 +20,7 @@ export const metadata: Metadata = {
     default: "yields.to",
     template: "%s | yields.to",
   },
-  description: "Discover the Best Yields on Plasma.",
+  description: "Find the best yields on Plasma.",
   keywords: [
     "Plasma chain",
     "DeFi yields",
@@ -53,6 +55,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <Navbar />
         {children}
       </body>
     </html>
