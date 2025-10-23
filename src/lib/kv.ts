@@ -1,13 +1,18 @@
 // Lightweight wrapper around Vercel KV with safe fallbacks.
 // Provides JSON get/set with TTL and an in-memory fallback.
 
-type AnyRecord = Record<string, any>;
+type JsonRecord = Record<string, unknown>;
 
-type CacheEntry = { value: any; expiresAt: number };
-const mem = (globalThis as any).__kvMem ?? new Map<string, CacheEntry>();
-(globalThis as any).__kvMem = mem;
+type CacheEntry = { value: unknown; expiresAt: number };
 
-async function getVercelKV() {
+declare global {
+  var __kvMem: Map<string, CacheEntry> | undefined;
+}
+
+const mem: Map<string, CacheEntry> = globalThis.__kvMem ?? new Map();
+globalThis.__kvMem = mem;
+
+async function getVercelKV(): Promise<typeof import("@vercel/kv").kv | null> {
   if (process.env.DISABLE_KV === "1" || process.env.DISABLE_KV === "true") {
     return null;
   }
@@ -24,7 +29,7 @@ async function getVercelKV() {
   }
 }
 
-export async function kvGetJson<T = AnyRecord>(key: string): Promise<T | null> {
+export async function kvGetJson<T = JsonRecord>(key: string): Promise<T | null> {
   const kv = await getVercelKV();
   if (kv) {
     try {
@@ -41,7 +46,7 @@ export async function kvGetJson<T = AnyRecord>(key: string): Promise<T | null> {
   return entry.value as T;
 }
 
-export async function kvSetJson(key: string, value: any, ttlSeconds: number) {
+export async function kvSetJson<T>(key: string, value: T, ttlSeconds: number) {
   const kv = await getVercelKV();
   if (kv) {
     try {

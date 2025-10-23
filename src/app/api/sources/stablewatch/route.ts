@@ -26,15 +26,17 @@ function toAbsolute(url: string): string {
   return `https://plasma.stablewatch.io${url}`;
 }
 
-function tryExtractJsonArrays(text: string): any[] {
+type UnknownRecord = Record<string, unknown>;
+
+function tryExtractJsonArrays(text: string): unknown[] {
   // Heuristic: find large array literals and attempt to coerce to JSON
-  const results: any[] = [];
+  const results: unknown[] = [];
   const arrRe = /\[(?:\{[\s\S]*?\}){3,}\]/g; // arrays with at least 3 objects
   let m: RegExpExecArray | null;
   while ((m = arrRe.exec(text))) {
     const raw = m[0];
     // Attempt to transform JS object literals to JSON: quote keys
-    let candidate = raw
+    const candidate = raw
       .replace(/([,{\s])(\w+)\s*:/g, '$1"$2":')
       .replace(/'([^']*)'/g, '"$1"');
     try {
@@ -48,23 +50,54 @@ function tryExtractJsonArrays(text: string): any[] {
   return results;
 }
 
-function normalizePools(arrays: any[]): PoolLike[] {
+function toOptionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim().length > 0 ? value : undefined;
+}
+
+function toNumberOrString(value: unknown): number | string | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim().length > 0) return value;
+  return null;
+}
+
+function normalizePools(arrays: unknown[]): PoolLike[] {
   // Pick the first array that looks like pools data
   for (const arr of arrays) {
     if (!Array.isArray(arr)) continue;
-    const sample = arr[0] ?? {};
-    const keys = Object.keys(sample ?? {});
+    const sampleCandidate = arr[0];
+    const sample: UnknownRecord =
+      typeof sampleCandidate === "object" && sampleCandidate !== null
+        ? (sampleCandidate as UnknownRecord)
+        : {};
+    const keys = Object.keys(sample);
     const hasApy = keys.some((k) => /apy|apr/i.test(k));
     const hasTvl = keys.some((k) => /tvl/i.test(k));
     if (!(hasApy && hasTvl)) continue;
-    return arr.map((o: any) => ({
-      name: o.name || o.pool || o.title || undefined,
-      project: o.project || o.protocol || undefined,
-      symbol: o.symbol || o.token || undefined,
-      apr: o.apr ?? o.apy ?? o.apy30d ?? null,
-      tvl: o.tvl ?? o.tvlUsd ?? o.tvl_usd ?? null,
-      link: o.link || o.url || undefined,
-    }));
+    return arr
+      .map((item) => {
+        if (typeof item !== "object" || item === null) return null;
+        const record = item as UnknownRecord;
+        const aprCandidate = record.apr ?? record.apy ?? record.apy30d ?? null;
+        const tvlCandidate = record.tvl ?? record.tvlUsd ?? record.tvl_usd ?? null;
+        return {
+          name:
+            toOptionalString(record.name) ??
+            toOptionalString(record.pool) ??
+            toOptionalString(record.title),
+          project:
+            toOptionalString(record.project) ??
+            toOptionalString(record.protocol),
+          symbol:
+            toOptionalString(record.symbol) ??
+            toOptionalString(record.token),
+          apr: toNumberOrString(aprCandidate),
+          tvl: toNumberOrString(tvlCandidate),
+          link:
+            toOptionalString(record.link) ??
+            toOptionalString(record.url),
+        } satisfies PoolLike;
+      })
+      .filter((pool): pool is PoolLike => pool !== null);
   }
   return [];
 }
@@ -117,4 +150,3 @@ export async function GET(req: Request) {
   await kvSetJson(KEY, pools, ttl);
   return NextResponse.json({ data: pools, cached: false });
 }
-

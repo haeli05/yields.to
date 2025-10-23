@@ -24,13 +24,21 @@ const PATHS = [
   "/api/xpl-top-15",
 ];
 
-async function fetchJson(path: string) {
+type FetchJsonResult = {
+  path: string;
+  status: number;
+  ok: boolean;
+  json: unknown;
+  url: string;
+};
+
+async function fetchJson(path: string): Promise<FetchJsonResult> {
   const url = `${BASE}${path}`;
   const res = await fetch(url, {
     cache: "no-store",
     headers: { "User-Agent": "yields.to-aggregator" },
   });
-  let json: any = null;
+  let json: unknown = null;
   try {
     json = await res.json();
   } catch {
@@ -58,9 +66,8 @@ export async function GET(req: Request) {
   const rounded = new Date(Math.floor(now.getTime() / 3600000) * 3600000);
 
   // Fetch endpoints with basic politeness: small delay between requests
-  const results: Array<{ path: string; status: number; ok: boolean; json: any; url: string }> = [];
+  const results: FetchJsonResult[] = [];
   for (const p of PATHS) {
-    /* eslint-disable no-await-in-loop */
     const r = await fetchJson(p);
     results.push(r);
     // 200ms delay to be polite
@@ -93,4 +100,3 @@ export async function GET(req: Request) {
 
   return NextResponse.json(summary);
 }
-

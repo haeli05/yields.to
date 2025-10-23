@@ -39,6 +39,16 @@ type YieldPool = {
   pool: string;
 };
 
+type PlasmaAggregateRow = {
+  ts: string;
+  chain_latest_tvl_usd: number | null;
+  chain_prev_tvl_usd: number | null;
+  chain_last_date: number | string | null;
+  protocol_latest_tvl_usd: number | null;
+  protocol_last_date: number | string | null;
+  top_pools: YieldPool[] | null;
+};
+
 const USD_COMPACT = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -116,21 +126,22 @@ export default async function DataSourcesPage() {
       auth: { persistSession: false },
     });
     const { data, error } = await supabase
-      .from("plasma_aggregate")
+      .from<PlasmaAggregateRow>("plasma_aggregate")
       .select(
         "ts, chain_latest_tvl_usd, chain_prev_tvl_usd, chain_last_date, protocol_latest_tvl_usd, protocol_last_date, top_pools"
       )
       .order("ts", { ascending: false })
       .limit(1);
     if (error) throw error;
-    const row: any | undefined = data?.[0];
+    const row = data?.[0];
     if (!row) throw new Error("No snapshot yet");
     latestChainTvl = row.chain_latest_tvl_usd ?? 0;
-    chainDailyChange = (row.chain_latest_tvl_usd ?? 0) - (row.chain_prev_tvl_usd ?? 0);
+    chainDailyChange =
+      (row.chain_latest_tvl_usd ?? 0) - (row.chain_prev_tvl_usd ?? 0);
     latestChainDate = row.chain_last_date ?? undefined;
     latestProtocolTvl = row.protocol_latest_tvl_usd ?? 0;
     latestProtocolDate = row.protocol_last_date ?? undefined;
-    topPools = (row.top_pools as YieldPool[])?.slice(0, 10) ?? [];
+    topPools = (row.top_pools ?? []).slice(0, 10);
   } catch {
     const [chainRes, protocolRes, yieldsRes] = await Promise.all([
       fetch("https://api.llama.fi/charts/Plasma", {

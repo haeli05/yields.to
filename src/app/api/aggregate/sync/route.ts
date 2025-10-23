@@ -138,7 +138,9 @@ export async function GET(req: Request) {
     }
 
     return NextResponse.json({ ok: true, upserted: snapshot.ts, pools: topPools.length });
-  } catch (e: any) {
-    return new NextResponse(`Sync failed: ${e?.message ?? e}`, { status: 500 });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : typeof error === "string" ? error : "Unknown error";
+    return new NextResponse(`Sync failed: ${message}`, { status: 500 });
   }
 }
