@@ -8,7 +8,6 @@ export default function Home() {
           Find the best yields on Plasma.
         </h1>
         <div className="w-full">
-          test
           <ChainMetricsCharts />
         </div>
       </section>

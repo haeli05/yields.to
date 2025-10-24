@@ -73,31 +73,31 @@ function normalizePools(arrays: unknown[]): PoolLike[] {
     const hasApy = keys.some((k) => /apy|apr/i.test(k));
     const hasTvl = keys.some((k) => /tvl/i.test(k));
     if (!(hasApy && hasTvl)) continue;
-    return arr
-      .map((item) => {
-        if (typeof item !== "object" || item === null) return null;
-        const record = item as UnknownRecord;
-        const aprCandidate = record.apr ?? record.apy ?? record.apy30d ?? null;
-        const tvlCandidate = record.tvl ?? record.tvlUsd ?? record.tvl_usd ?? null;
-        return {
-          name:
-            toOptionalString(record.name) ??
-            toOptionalString(record.pool) ??
-            toOptionalString(record.title),
-          project:
-            toOptionalString(record.project) ??
-            toOptionalString(record.protocol),
-          symbol:
-            toOptionalString(record.symbol) ??
-            toOptionalString(record.token),
-          apr: toNumberOrString(aprCandidate),
-          tvl: toNumberOrString(tvlCandidate),
-          link:
-            toOptionalString(record.link) ??
-            toOptionalString(record.url),
-        } satisfies PoolLike;
-      })
-      .filter((pool): pool is PoolLike => pool !== null);
+    const normalized: PoolLike[] = [];
+    for (const item of arr) {
+      if (typeof item !== "object" || item === null) continue;
+      const record = item as UnknownRecord;
+      const aprCandidate = record.apr ?? record.apy ?? record.apy30d ?? null;
+      const tvlCandidate = record.tvl ?? record.tvlUsd ?? record.tvl_usd ?? null;
+      normalized.push({
+        name:
+          toOptionalString(record.name) ??
+          toOptionalString(record.pool) ??
+          toOptionalString(record.title),
+        project:
+          toOptionalString(record.project) ??
+          toOptionalString(record.protocol),
+        symbol:
+          toOptionalString(record.symbol) ??
+          toOptionalString(record.token),
+        apr: toNumberOrString(aprCandidate),
+        tvl: toNumberOrString(tvlCandidate),
+        link:
+          toOptionalString(record.link) ??
+          toOptionalString(record.url),
+      });
+    }
+    return normalized;
   }
   return [];
 }

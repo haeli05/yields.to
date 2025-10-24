@@ -1,19 +1,7 @@
 import type { Metadata } from "next";
 
 import { PlasmaYieldDashboard, type DashboardPool } from "@/components/plasma-yield-dashboard";
-
-type YieldApiResponse = {
-  data?: {
-    chain: string;
-    project: string;
-    symbol: string;
-    tvlUsd: number;
-    apy: number | null;
-    apyBase?: number | null;
-    apyPct30D?: number | null;
-    pool: string;
-  }[];
-};
+import { loadPlasmaYields, type PlasmaYieldPool } from "@/lib/plasma-yields";
 
 const PROJECT_CATEGORY_MAP: Record<string, "DeFi" | "RWA" | "Protocol"> = {
   "plasma saving vaults": "Protocol",
@@ -52,13 +40,10 @@ export const metadata: Metadata = {
 };
 
 export default async function DashboardPage() {
-  let apiData: YieldApiResponse["data"] = [];
+  let apiData: PlasmaYieldPool[] = [];
   try {
-    const response = await fetch(`/api/yields/plasma`, { cache: "no-store" });
-    if (response.ok) {
-      const json = (await response.json()) as YieldApiResponse;
-      apiData = json.data ?? [];
-    }
+    const { data } = await loadPlasmaYields();
+    apiData = data;
   } catch {
     // swallow and show empty dataset
   }

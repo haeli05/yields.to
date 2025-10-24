@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { loadPlasmaYields, type PlasmaYieldPool } from "@/lib/plasma-yields";
 
 type ChartPoint = {
   date: number | string;
@@ -28,17 +29,6 @@ type ProtocolResponse = {
   }[];
 };
 
-type YieldPool = {
-  chain: string;
-  project: string;
-  symbol: string;
-  tvlUsd: number;
-  apy: number | null;
-  apyBase?: number | null;
-  apyPct30D?: number | null;
-  pool: string;
-};
-
 type PlasmaAggregateRow = {
   ts: string;
   chain_latest_tvl_usd: number | null;
@@ -46,7 +36,7 @@ type PlasmaAggregateRow = {
   chain_last_date: number | string | null;
   protocol_latest_tvl_usd: number | null;
   protocol_last_date: number | string | null;
-  top_pools: YieldPool[] | null;
+  top_pools: PlasmaYieldPool[] | null;
 };
 
 const USD_COMPACT = new Intl.NumberFormat("en-US", {
@@ -115,7 +105,7 @@ export default async function DataSourcesPage() {
   let latestChainDate: number | string | undefined;
   let latestProtocolTvl = 0;
   let latestProtocolDate: number | string | undefined;
-  let topPools: YieldPool[] = [];
+  let topPools: PlasmaYieldPool[] = [];
 
   try {
     const supabaseUrl = process.env.SUPABASE_URL;
@@ -126,14 +116,14 @@ export default async function DataSourcesPage() {
       auth: { persistSession: false },
     });
     const { data, error } = await supabase
-      .from<PlasmaAggregateRow>("plasma_aggregate")
+      .from("plasma_aggregate")
       .select(
         "ts, chain_latest_tvl_usd, chain_prev_tvl_usd, chain_last_date, protocol_latest_tvl_usd, protocol_last_date, top_pools"
       )
       .order("ts", { ascending: false })
       .limit(1);
     if (error) throw error;
-    const row = data?.[0];
+    const row = (data?.[0] ?? null) as PlasmaAggregateRow | null;
     if (!row) throw new Error("No snapshot yet");
     latestChainTvl = row.chain_latest_tvl_usd ?? 0;
     chainDailyChange =
@@ -143,7 +133,7 @@ export default async function DataSourcesPage() {
     latestProtocolDate = row.protocol_last_date ?? undefined;
     topPools = (row.top_pools ?? []).slice(0, 10);
   } catch {
-    const [chainRes, protocolRes, yieldsRes] = await Promise.all([
+    const [chainRes, protocolRes, yieldsResult] = await Promise.all([
       fetch("https://api.llama.fi/charts/Plasma", {
         next: { revalidate: 60 * 30 },
       }),
@@ -151,16 +141,16 @@ export default async function DataSourcesPage() {
         next: { revalidate: 60 * 30 },
       }),
       // Prefer our trimmed + cached KV-backed endpoint to avoid large cache sizes
-      fetch("/api/yields/plasma", { cache: "no-store" }),
+      loadPlasmaYields(),
     ]);
 
-    if (!chainRes.ok || !protocolRes.ok || !yieldsRes.ok) {
+    if (!chainRes.ok || !protocolRes.ok) {
       throw new Error("Unable to load Plasma data.");
     }
 
     const chainData = (await chainRes.json()) as ChartPoint[];
     const protocolData = (await protocolRes.json()) as ProtocolResponse;
-    const yieldsData = (await yieldsRes.json()) as { data?: YieldPool[] };
+    const yieldsData = yieldsResult.data;
 
     const latestChain = chainData.at(-1);
     const previousChain = chainData.at(-2);
@@ -182,10 +172,7 @@ export default async function DataSourcesPage() {
       protocolTvlSeries.at(-1)?.totalLiquidityUSD ?? 0;
     latestProtocolDate = protocolTvlSeries.at(-1)?.date ?? undefined;
 
-    topPools = (yieldsData.data ?? [])
-      .filter((pool) => pool.chain === "Plasma")
-      .sort((a, b) => b.tvlUsd - a.tvlUsd)
-      .slice(0, 10);
+    topPools = yieldsData.slice(0, 10);
   }
 
   return (

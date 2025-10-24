@@ -1,51 +1,21 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ParentSize } from '@visx/responsive';
 import { Group } from '@visx/group';
 import { Bar, BarStack, LinePath } from '@visx/shape';
 import { scaleBand, scaleLinear, scaleOrdinal, scaleTime } from '@visx/scale';
 import { AxisBottom, AxisLeft, AxisRight } from '@visx/axis';
 
-type UsersDatum = {
-  day: string;
-  active_users?: number;
-  new_users?: number;
-  returning_users?: number;
-  total_unique_wallets?: number;
-};
+import type {
+  BlockDatum,
+  ChainMetricsData,
+  ChainMetricsEnvelope,
+  ContractDatum,
+  TransactionsDatum,
+  UsersDatum,
+} from '@/types/chain-metrics';
 
-type TransactionsDatum = {
-  day: string;
-  daily_tx_count?: number;
-  cumulative_tx_count?: number;
-};
-
-type ContractDatum = {
-  day: string;
-  contract_creations?: number;
-  cumulative_contracts?: number;
-};
-
-type BlockDatum = {
-  day: string;
-  avg_txs_per_block?: number;
-  avg_gas_used_per_block?: number;
-  avg_gas_price_per_block?: number;
-};
-
-type ApiResponse<T> = {
-  data?: T[];
-};
-
-type ChainMetricsData = {
-  users: UsersDatum[];
-  transactions: TransactionsDatum[];
-  contracts: ContractDatum[];
-  blocks: BlockDatum[];
-};
-
-const API_BASE = 'https://api-plasma.sumcap.xyz/api';
+const API_ROUTE = '/api/chain-metrics';
 const DATE_LABEL = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: 'numeric',
@@ -223,82 +193,73 @@ function UsersChart({ data }: { data: UsersPoint[] }) {
     return <EmptyState message="User activity data is currently unavailable." />;
   }
 
+  const width = 640;
+  const height = 280;
+  const margin = { top: 12, right: 12, bottom: 36, left: 48 };
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
+
+  const xScale = scaleTime({
+    range: [0, innerWidth],
+    domain: [data[0].date, data[data.length - 1].date] as [Date, Date],
+  });
+
+  const maxValue = Math.max(...data.map((d) => d.active));
+  const yScale = scaleLinear({
+    range: [innerHeight, 0],
+    domain: [0, maxValue * 1.1 || 1],
+    nice: true,
+  });
+
+  const series = [
+    { key: 'active', label: 'Active users', color: '#22c55e' },
+    { key: 'newcomers', label: 'New users', color: '#0ea5e9' },
+    { key: 'returning', label: 'Returning', color: '#a855f7' },
+  ] as const;
+
   return (
-    <ParentSize debounceTime={40}>
-      {({ width, height }) => {
-        if (width === 0 || height === 0) return null;
-
-        const margin = { top: 12, right: 12, bottom: 36, left: 48 };
-        const innerWidth = width - margin.left - margin.right;
-        const innerHeight = height - margin.top - margin.bottom;
-
-        const xScale = scaleTime({
-          range: [0, innerWidth],
-          domain: [
-            data[0].date,
-            data[data.length - 1].date,
-          ] as [Date, Date],
-        });
-
-        const maxValue = Math.max(...data.map((d) => d.active));
-        const yScale = scaleLinear({
-          range: [innerHeight, 0],
-          domain: [0, maxValue * 1.1 || 1],
-          nice: true,
-        });
-
-        const series = [
-          { key: 'active', label: 'Active users', color: '#22c55e' },
-          { key: 'newcomers', label: 'New users', color: '#0ea5e9' },
-          { key: 'returning', label: 'Returning', color: '#a855f7' },
-        ] as const;
-
-        return (
-          <svg width={width} height={height}>
-            <Group left={margin.left} top={margin.top}>
-              <AxisLeft
-                scale={yScale}
-                stroke="#475569"
-                tickStroke="#475569"
-                tickLabelProps={() => ({
-                  fill: '#94a3b8',
-                  fontSize: 11,
-                  textAnchor: 'end',
-                  dy: '0.33em',
-                })}
-                tickFormat={(value) => NUMBER_COMPACT.format(Number(value))}
-              />
-              <AxisBottom
-                top={innerHeight}
-                scale={xScale}
-                stroke="#475569"
-                tickStroke="#475569"
-                tickLabelProps={() => ({
-                  fill: '#94a3b8',
-                  fontSize: 11,
-                  textAnchor: 'middle',
-                  dy: '0.33em',
-                })}
-                tickFormat={(value) => DATE_LABEL.format(value as Date)}
-              />
-              {series.map((serie) => (
-                <LinePath
-                  key={serie.key}
-                  data={data}
-                  x={(d) => xScale(d.date)}
-                  y={(d) => yScale(d[serie.key])}
-                  stroke={serie.color}
-                  strokeWidth={2}
-                  strokeOpacity={1}
-                  fill="none"
-                />
-              ))}
-            </Group>
-            <Legend items={series.map(({ label, color }) => ({ label, color }))} />
-          </svg>
-        );
-      }}
-    </ParentSize>
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%">
+      <Group left={margin.left} top={margin.top}>
+        <AxisLeft
+          scale={yScale}
+          stroke="#475569"
+          tickStroke="#475569"
+          tickLabelProps={() => ({
+            fill: '#94a3b8',
+            fontSize: 11,
+            textAnchor: 'end',
+            dy: '0.33em',
+          })}
+          tickFormat={(value) => NUMBER_COMPACT.format(Number(value))}
+        />
+        <AxisBottom
+          top={innerHeight}
+          scale={xScale}
+          stroke="#475569"
+          tickStroke="#475569"
+          tickLabelProps={() => ({
+            fill: '#94a3b8',
+            fontSize: 11,
+            textAnchor: 'middle',
+            dy: '0.33em',
+          })}
+          tickFormat={(value) => DATE_LABEL.format(value as Date)}
+        />
+        {series.map((serie) => (
+          <LinePath
+            key={serie.key}
+            data={data}
+            x={(d) => xScale(d.date)}
+            y={(d) => yScale(d[serie.key])}
+            stroke={serie.color}
+            strokeWidth={2}
+            strokeOpacity={1}
+            fill="none"
+          />
+        ))}
+      </Group>
+      <Legend items={series.map(({ label, color }) => ({ label, color }))} />
+    </svg>
   );
 }
 
@@ -307,156 +268,150 @@ function UserBreakdownChart({ data }: { data: UsersPoint[] }) {
     return <EmptyState message="User breakdown data is currently unavailable." />;
   }
 
+  const width = 640;
+  const height = 280;
+  const margin = { top: 12, right: 52, bottom: 36, left: 48 };
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
+
+  const STACK_KEYS = ['newcomers', 'returning'] as const;
+  type StackKey = (typeof STACK_KEYS)[number];
+  type BreakdownDatum = {
+    date: Date;
+    time: number;
+    newcomers: number;
+    returning: number;
+    unique: number;
+  };
+
+  const stackData: BreakdownDatum[] = data.map((point) => ({
+    date: point.date,
+    time: point.date.getTime(),
+    newcomers: point.newcomers,
+    returning: point.returning,
+    unique: point.unique,
+  }));
+
+  const xDomain = stackData.map((point) => point.time);
+  const xScale = scaleBand<number>({
+    range: [0, innerWidth],
+    domain: xDomain,
+    padding: 0.2,
+  });
+
+  const maxStackValue = Math.max(
+    ...stackData.map((point) => point.newcomers + point.returning),
+  );
+  const yBar = scaleLinear({
+    range: [innerHeight, 0],
+    domain: [0, maxStackValue * 1.1 || 1],
+    nice: true,
+  });
+
+  const maxUnique = Math.max(...stackData.map((point) => point.unique));
+  const yLine = scaleLinear({
+    range: [innerHeight, 0],
+    domain: [0, maxUnique * 1.05 || 1],
+    nice: true,
+  });
+
+  const colorScale = scaleOrdinal<StackKey, string>({
+    domain: [...STACK_KEYS],
+    range: ['#0ea5e9', '#a855f7'],
+  });
+
+  const bandWidth = xScale.bandwidth();
+  const tickModulo = Math.max(1, Math.ceil(stackData.length / 8));
+
   return (
-    <ParentSize debounceTime={40}>
-      {({ width, height }) => {
-        if (width === 0 || height === 0) return null;
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%">
+      <Group left={margin.left} top={margin.top}>
+        <AxisLeft
+          scale={yBar}
+          stroke="#475569"
+          tickStroke="#475569"
+          tickLabelProps={() => ({
+            fill: '#94a3b8',
+            fontSize: 11,
+            textAnchor: 'end',
+            dy: '0.33em',
+          })}
+          tickFormat={(value) => NUMBER_COMPACT.format(Number(value))}
+        />
+        <AxisBottom
+          top={innerHeight}
+          scale={xScale}
+          stroke="#475569"
+          tickStroke="#475569"
+          tickValues={xDomain.filter((_, index) => index % tickModulo === 0)}
+          tickFormat={(value) => DATE_LABEL.format(new Date(Number(value)))}
+          tickLabelProps={() => ({
+            fill: '#94a3b8',
+            fontSize: 10,
+            textAnchor: 'middle',
+            dy: '0.5em',
+          })}
+        />
+        <AxisRight
+          left={innerWidth}
+          scale={yLine}
+          stroke="#475569"
+          tickStroke="#475569"
+          tickLabelProps={() => ({
+            fill: '#94a3b8',
+            fontSize: 11,
+            textAnchor: 'start',
+            dy: '0.33em',
+          })}
+          tickFormat={(value) => NUMBER_COMPACT.format(Number(value))}
+        />
 
-        const margin = { top: 12, right: 52, bottom: 36, left: 48 };
-        const innerWidth = width - margin.left - margin.right;
-        const innerHeight = height - margin.top - margin.bottom;
+        <BarStack<BreakdownDatum, StackKey>
+          data={stackData}
+          keys={[...STACK_KEYS]}
+          x={(point) => point.time}
+          xScale={xScale}
+          yScale={yBar}
+          color={colorScale}
+        >
+          {(barStacks) =>
+            barStacks.flatMap((barStack) =>
+              barStack.bars.map((bar) => (
+                <rect
+                  key={`barstack-${barStack.key}-${bar.index}`}
+                  x={bar.x}
+                  y={bar.y}
+                  width={bar.width}
+                  height={bar.height}
+                  fill={bar.color}
+                  opacity={0.85}
+                />
+              )),
+            )
+          }
+        </BarStack>
 
-        const STACK_KEYS = ['newcomers', 'returning'] as const;
-        type StackKey = (typeof STACK_KEYS)[number];
-        type BreakdownDatum = {
-          date: Date;
-          time: number;
-          newcomers: number;
-          returning: number;
-          unique: number;
-        };
-
-        const stackData: BreakdownDatum[] = data.map((point) => ({
-          date: point.date,
-          time: point.date.getTime(),
-          newcomers: point.newcomers,
-          returning: point.returning,
-          unique: point.unique,
-        }));
-
-        const xDomain = stackData.map((point) => point.time);
-        const xScale = scaleBand<number>({
-          range: [0, innerWidth],
-          domain: xDomain,
-          padding: 0.2,
-        });
-
-        const maxStackValue = Math.max(
-          ...stackData.map((point) => point.newcomers + point.returning),
-        );
-        const yBar = scaleLinear({
-          range: [innerHeight, 0],
-          domain: [0, maxStackValue * 1.1 || 1],
-          nice: true,
-        });
-
-        const maxUnique = Math.max(...stackData.map((point) => point.unique));
-        const yLine = scaleLinear({
-          range: [innerHeight, 0],
-          domain: [0, maxUnique * 1.05 || 1],
-          nice: true,
-        });
-
-        const colorScale = scaleOrdinal<StackKey, string>({
-          domain: STACK_KEYS,
-          range: ['#0ea5e9', '#a855f7'],
-        });
-
-        const bandWidth = xScale.bandwidth();
-        const tickModulo = Math.max(1, Math.ceil(stackData.length / 8));
-
-        return (
-          <svg width={width} height={height}>
-            <Group left={margin.left} top={margin.top}>
-              <AxisLeft
-                scale={yBar}
-                stroke="#475569"
-                tickStroke="#475569"
-                tickLabelProps={() => ({
-                  fill: '#94a3b8',
-                  fontSize: 11,
-                  textAnchor: 'end',
-                  dy: '0.33em',
-                })}
-                tickFormat={(value) => NUMBER_COMPACT.format(Number(value))}
-              />
-              <AxisBottom
-                top={innerHeight}
-                scale={xScale}
-                stroke="#475569"
-                tickStroke="#475569"
-                tickValues={xDomain.filter((_, index) => index % tickModulo === 0)}
-                tickFormat={(value) => DATE_LABEL.format(new Date(Number(value)))}
-                tickLabelProps={() => ({
-                  fill: '#94a3b8',
-                  fontSize: 10,
-                  textAnchor: 'middle',
-                  dy: '0.5em',
-                })}
-              />
-              <AxisRight
-                left={innerWidth}
-                scale={yLine}
-                stroke="#475569"
-                tickStroke="#475569"
-                tickLabelProps={() => ({
-                  fill: '#94a3b8',
-                  fontSize: 11,
-                  textAnchor: 'start',
-                  dy: '0.33em',
-                })}
-                tickFormat={(value) => NUMBER_COMPACT.format(Number(value))}
-              />
-
-              <BarStack<BreakdownDatum, StackKey>
-                data={stackData}
-                keys={STACK_KEYS}
-                x={(point) => point.time}
-                xScale={xScale}
-                yScale={yBar}
-                color={colorScale}
-              >
-                {(barStacks) =>
-                  barStacks.map((barStack) =>
-                    barStack.bars.map((bar) => (
-                      <rect
-                        key={`barstack-${barStack.key}-${bar.index}`}
-                        x={bar.x}
-                        y={bar.y}
-                        width={bar.width}
-                        height={bar.height}
-                        fill={bar.color}
-                        opacity={0.85}
-                      />
-                    )),
-                  )
-                }
-              </BarStack>
-
-              <LinePath
-                data={stackData}
-                x={(point) => {
-                  const x = xScale(point.time);
-                  return (x ?? 0) + bandWidth / 2;
-                }}
-                y={(point) => yLine(point.unique)}
-                stroke="#22c55e"
-                strokeWidth={2}
-                strokeLinejoin="round"
-                strokeLinecap="round"
-              />
-            </Group>
-            <Legend
-              items={[
-                { label: 'New users (daily)', color: '#0ea5e9' },
-                { label: 'Returning users (daily)', color: '#a855f7' },
-                { label: 'Total unique wallets', color: '#22c55e' },
-              ]}
-            />
-          </svg>
-        );
-      }}
-    </ParentSize>
+        <LinePath
+          data={stackData}
+          x={(point) => {
+            const x = xScale(point.time);
+            return (x ?? 0) + bandWidth / 2;
+          }}
+          y={(point) => yLine(point.unique)}
+          stroke="#22c55e"
+          strokeWidth={2}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+      </Group>
+      <Legend
+        items={[
+          { label: 'New users (daily)', color: '#0ea5e9' },
+          { label: 'Returning users (daily)', color: '#a855f7' },
+          { label: 'Total unique wallets', color: '#22c55e' },
+        ]}
+      />
+    </svg>
   );
 }
 
@@ -467,121 +422,108 @@ function TransactionsChart({ data }: { data: TransactionsPoint[] }) {
     );
   }
 
+  const width = 640;
+  const height = 280;
+  const margin = { top: 12, right: 52, bottom: 36, left: 48 };
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
+
+  const xScale = scaleTime({
+    range: [0, innerWidth],
+    domain: [data[0].date, data[data.length - 1].date] as [Date, Date],
+  });
+
+  const maxDaily = Math.max(...data.map((d) => d.daily));
+  const yLeft = scaleLinear({
+    range: [innerHeight, 0],
+    domain: [0, maxDaily * 1.1 || 1],
+    nice: true,
+  });
+
+  const maxCumulative = Math.max(...data.map((d) => d.cumulative));
+  const yRight = scaleLinear({
+    range: [innerHeight, 0],
+    domain: [0, maxCumulative * 1.05 || 1],
+    nice: true,
+  });
+
+  const areaPath = data.map((point, idx) => {
+    const x = xScale(point.date);
+    const y = yLeft(point.daily);
+    if (idx === 0) {
+      return `M${x},${innerHeight} L${x},${y}`;
+    }
+    return `L${x},${y}`;
+  });
+
+  const areaClose = `${areaPath.join(' ')} L${xScale(
+    data[data.length - 1].date,
+  )},${innerHeight} Z`;
+
   return (
-    <ParentSize debounceTime={40}>
-      {({ width, height }) => {
-        if (width === 0 || height === 0) return null;
-        const margin = { top: 12, right: 52, bottom: 36, left: 48 };
-        const innerWidth = width - margin.left - margin.right;
-        const innerHeight = height - margin.top - margin.bottom;
-
-        const xScale = scaleTime({
-          range: [0, innerWidth],
-          domain: [
-            data[0].date,
-            data[data.length - 1].date,
-          ] as [Date, Date],
-        });
-
-        const maxDaily = Math.max(...data.map((d) => d.daily));
-        const yLeft = scaleLinear({
-          range: [innerHeight, 0],
-          domain: [0, maxDaily * 1.1 || 1],
-          nice: true,
-        });
-
-        const maxCumulative = Math.max(...data.map((d) => d.cumulative));
-        const yRight = scaleLinear({
-          range: [innerHeight, 0],
-          domain: [0, maxCumulative * 1.05 || 1],
-          nice: true,
-        });
-
-        const areaPath = data.map((point, idx) => {
-          const x = xScale(point.date);
-          const y = yLeft(point.daily);
-          if (idx === 0) {
-            return `M${x},${innerHeight} L${x},${y}`;
-          }
-          return `L${x},${y}`;
-        });
-
-        const areaClose = `${areaPath.join(' ')} L${xScale(
-          data[data.length - 1].date,
-        )},${innerHeight} Z`;
-
-        return (
-          <svg width={width} height={height}>
-            <Group left={margin.left} top={margin.top}>
-              <AxisLeft
-                scale={yLeft}
-                stroke="#475569"
-                tickStroke="#475569"
-                tickLabelProps={() => ({
-                  fill: '#94a3b8',
-                  fontSize: 11,
-                  textAnchor: 'end',
-                  dy: '0.33em',
-                })}
-                tickFormat={(value) => NUMBER_COMPACT.format(Number(value))}
-              />
-              <AxisBottom
-                top={innerHeight}
-                scale={xScale}
-                stroke="#475569"
-                tickStroke="#475569"
-                tickLabelProps={() => ({
-                  fill: '#94a3b8',
-                  fontSize: 11,
-                  textAnchor: 'middle',
-                  dy: '0.33em',
-                })}
-                tickFormat={(value) => DATE_LABEL.format(value as Date)}
-              />
-              <AxisRight
-                left={innerWidth}
-                scale={yRight}
-                stroke="#475569"
-                tickStroke="#475569"
-                tickLabelProps={() => ({
-                  fill: '#94a3b8',
-                  fontSize: 11,
-                  textAnchor: 'start',
-                  dy: '0.33em',
-                })}
-                tickFormat={(value) => NUMBER_COMPACT.format(Number(value))}
-              />
-              <path
-                d={areaClose}
-                fill="#0ea5e9"
-                fillOpacity={0.2}
-                stroke="none"
-              />
-              <LinePath
-                data={data}
-                x={(d) => xScale(d.date)}
-                y={(d) => yLeft(d.daily)}
-                stroke="#0ea5e9"
-                strokeWidth={2}
-              />
-              <LinePath
-                data={data}
-                x={(d) => xScale(d.date)}
-                y={(d) => yRight(d.cumulative)}
-                stroke="#22c55e"
-                strokeWidth={2}
-              />
-            </Group>
-            <Legend
-              items={[
-                { label: 'Daily transactions', color: '#0ea5e9' },
-                { label: 'Cumulative transactions', color: '#22c55e' },
-              ]}
-            />
-          </svg>
-        );
-      }}
-    </ParentSize>
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%">
+      <Group left={margin.left} top={margin.top}>
+        <AxisLeft
+          scale={yLeft}
+          stroke="#475569"
+          tickStroke="#475569"
+          tickLabelProps={() => ({
+            fill: '#94a3b8',
+            fontSize: 11,
+            textAnchor: 'end',
+            dy: '0.33em',
+          })}
+          tickFormat={(value) => NUMBER_COMPACT.format(Number(value))}
+        />
+        <AxisBottom
+          top={innerHeight}
+          scale={xScale}
+          stroke="#475569"
+          tickStroke="#475569"
+          tickLabelProps={() => ({
+            fill: '#94a3b8',
+            fontSize: 11,
+            textAnchor: 'middle',
+            dy: '0.33em',
+          })}
+          tickFormat={(value) => DATE_LABEL.format(value as Date)}
+        />
+        <AxisRight
+          left={innerWidth}
+          scale={yRight}
+          stroke="#475569"
+          tickStroke="#475569"
+          tickLabelProps={() => ({
+            fill: '#94a3b8',
+            fontSize: 11,
+            textAnchor: 'start',
+            dy: '0.33em',
+          })}
+          tickFormat={(value) => NUMBER_COMPACT.format(Number(value))}
+        />
+        <path d={areaClose} fill="#0ea5e9" fillOpacity={0.2} stroke="none" />
+        <LinePath
+          data={data}
+          x={(d) => xScale(d.date)}
+          y={(d) => yLeft(d.daily)}
+          stroke="#0ea5e9"
+          strokeWidth={2}
+        />
+        <LinePath
+          data={data}
+          x={(d) => xScale(d.date)}
+          y={(d) => yRight(d.cumulative)}
+          stroke="#22c55e"
+          strokeWidth={2}
+        />
+      </Group>
+      <Legend
+        items={[
+          { label: 'Daily transactions', color: '#0ea5e9' },
+          { label: 'Cumulative transactions', color: '#22c55e' },
+        ]}
+      />
+    </svg>
   );
 }
 
@@ -592,115 +534,107 @@ function ContractsChart({ data }: { data: ContractsPoint[] }) {
     );
   }
 
+  const width = 640;
+  const height = 280;
+  const margin = { top: 12, right: 52, bottom: 36, left: 48 };
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
+
+  const xScale = scaleTime({
+    range: [0, innerWidth],
+    domain: [data[0].date, data[data.length - 1].date] as [Date, Date],
+  });
+
+  const maxDaily = Math.max(...data.map((d) => d.daily));
+  const yLeft = scaleLinear({
+    range: [innerHeight, 0],
+    domain: [0, maxDaily * 1.1 || 1],
+    nice: true,
+  });
+
+  const maxCumulative = Math.max(...data.map((d) => d.cumulative));
+  const yRight = scaleLinear({
+    range: [innerHeight, 0],
+    domain: [0, maxCumulative * 1.05 || 1],
+    nice: true,
+  });
+
+  const barWidth = data.length ? Math.max(innerWidth / data.length - 6, 2) : 4;
+
   return (
-    <ParentSize debounceTime={40}>
-      {({ width, height }) => {
-        if (width === 0 || height === 0) return null;
-        const margin = { top: 12, right: 52, bottom: 36, left: 48 };
-        const innerWidth = width - margin.left - margin.right;
-        const innerHeight = height - margin.top - margin.bottom;
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%">
+      <Group left={margin.left} top={margin.top}>
+        <AxisLeft
+          scale={yLeft}
+          stroke="#475569"
+          tickStroke="#475569"
+          tickLabelProps={() => ({
+            fill: '#94a3b8',
+            fontSize: 11,
+            textAnchor: 'end',
+            dy: '0.33em',
+          })}
+          tickFormat={(value) => NUMBER_COMPACT.format(Number(value))}
+        />
+        <AxisBottom
+          top={innerHeight}
+          scale={xScale}
+          stroke="#475569"
+          tickStroke="#475569"
+          tickLabelProps={() => ({
+            fill: '#94a3b8',
+            fontSize: 11,
+            textAnchor: 'middle',
+            dy: '0.33em',
+          })}
+          tickFormat={(value) => DATE_LABEL.format(value as Date)}
+        />
+        <AxisRight
+          left={innerWidth}
+          scale={yRight}
+          stroke="#475569"
+          tickStroke="#475569"
+          tickLabelProps={() => ({
+            fill: '#94a3b8',
+            fontSize: 11,
+            textAnchor: 'start',
+            dy: '0.33em',
+          })}
+          tickFormat={(value) => NUMBER_COMPACT.format(Number(value))}
+        />
 
-        const xScale = scaleTime({
-          range: [0, innerWidth],
-          domain: [
-            data[0].date,
-            data[data.length - 1].date,
-          ] as [Date, Date],
-        });
-
-        const maxDaily = Math.max(...data.map((d) => d.daily));
-        const yLeft = scaleLinear({
-          range: [innerHeight, 0],
-          domain: [0, maxDaily * 1.1 || 1],
-          nice: true,
-        });
-
-        const maxCumulative = Math.max(...data.map((d) => d.cumulative));
-        const yRight = scaleLinear({
-          range: [innerHeight, 0],
-          domain: [0, maxCumulative * 1.05 || 1],
-          nice: true,
-        });
-
-        const barWidth = data.length ? Math.max(innerWidth / data.length - 6, 2) : 4;
-
-        return (
-          <svg width={width} height={height}>
-            <Group left={margin.left} top={margin.top}>
-              <AxisLeft
-                scale={yLeft}
-                stroke="#475569"
-                tickStroke="#475569"
-                tickLabelProps={() => ({
-                  fill: '#94a3b8',
-                  fontSize: 11,
-                  textAnchor: 'end',
-                  dy: '0.33em',
-                })}
-                tickFormat={(value) => NUMBER_COMPACT.format(Number(value))}
-              />
-              <AxisBottom
-                top={innerHeight}
-                scale={xScale}
-                stroke="#475569"
-                tickStroke="#475569"
-                tickLabelProps={() => ({
-                  fill: '#94a3b8',
-                  fontSize: 11,
-                  textAnchor: 'middle',
-                  dy: '0.33em',
-                })}
-                tickFormat={(value) => DATE_LABEL.format(value as Date)}
-              />
-              <AxisRight
-                left={innerWidth}
-                scale={yRight}
-                stroke="#475569"
-                tickStroke="#475569"
-                tickLabelProps={() => ({
-                  fill: '#94a3b8',
-                  fontSize: 11,
-                  textAnchor: 'start',
-                  dy: '0.33em',
-                })}
-                tickFormat={(value) => NUMBER_COMPACT.format(Number(value))}
-              />
-
-              {data.map((point) => {
-                const x = xScale(point.date) - barWidth / 2;
-                const y = yLeft(point.daily);
-                const heightValue = innerHeight - y;
-                return (
-                  <Bar
-                    key={`bar-${point.date.toISOString()}`}
-                    x={x}
-                    y={y}
-                    width={barWidth}
-                    height={heightValue}
-                    fill="#8b5cf6"
-                    fillOpacity={0.35}
-                  />
-                );
-              })}
-
-              <LinePath
-                data={data}
-                x={(d) => xScale(d.date)}
-                y={(d) => yRight(d.cumulative)}
-                stroke="#a855f7"
-                strokeWidth={2}
-              />
-            </Group>
-            <Legend
-              items={[
-                { label: 'Daily contract deployments', color: '#8b5cf6' },
-                { label: 'Total contracts', color: '#a855f7' },
-              ]}
+        {data.map((point) => {
+          const x = xScale(point.date) - barWidth / 2;
+          const y = yLeft(point.daily);
+          const heightValue = innerHeight - y;
+          return (
+            <Bar
+              key={`bar-${point.date.toISOString()}`}
+              x={x}
+              y={y}
+              width={barWidth}
+              height={heightValue}
+              fill="#8b5cf6"
+              fillOpacity={0.35}
             />
-          </svg>
-        );
-      }}
-    </ParentSize>
+          );
+        })}
+
+        <LinePath
+          data={data}
+          x={(d) => xScale(d.date)}
+          y={(d) => yRight(d.cumulative)}
+          stroke="#a855f7"
+          strokeWidth={2}
+        />
+      </Group>
+      <Legend
+        items={[
+          { label: 'Daily contract deployments', color: '#8b5cf6' },
+          { label: 'Total contracts', color: '#a855f7' },
+        ]}
+      />
+    </svg>
   );
 }
 
@@ -711,129 +645,121 @@ function BlockMetricsChart({ data }: { data: BlocksPoint[] }) {
     );
   }
 
+  const width = 640;
+  const height = 280;
+  const margin = { top: 12, right: 52, bottom: 36, left: 48 };
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
+
+  const xScale = scaleTime({
+    range: [0, innerWidth],
+    domain: [data[0].date, data[data.length - 1].date] as [Date, Date],
+  });
+
+  const maxLeft = Math.max(
+    ...data.map((d) => Math.max(d.avgTxPerBlock, d.avgGasUsed / 1_000)),
+  );
+  const yLeft = scaleLinear({
+    range: [innerHeight, 0],
+    domain: [0, maxLeft * 1.1 || 1],
+    nice: true,
+  });
+
+  const maxRight = Math.max(...data.map((d) => d.avgGasPriceGwei));
+  const yRight = scaleLinear({
+    range: [innerHeight, 0],
+    domain: [0, maxRight * 1.1 || 1],
+    nice: true,
+  });
+
   return (
-    <ParentSize debounceTime={40}>
-      {({ width, height }) => {
-        if (width === 0 || height === 0) return null;
-        const margin = { top: 12, right: 52, bottom: 36, left: 48 };
-        const innerWidth = width - margin.left - margin.right;
-        const innerHeight = height - margin.top - margin.bottom;
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%">
+      <Group left={margin.left} top={margin.top}>
+        <AxisLeft
+          scale={yLeft}
+          stroke="#475569"
+          tickStroke="#475569"
+          tickLabelProps={() => ({
+            fill: '#94a3b8',
+            fontSize: 11,
+            textAnchor: 'end',
+            dy: '0.33em',
+          })}
+          tickFormat={(value) => NUMBER_COMPACT.format(Number(value))}
+          label="Tx / block & gas used (×1k)"
+          labelProps={{
+            fill: '#94a3b8',
+            fontSize: 10,
+            textAnchor: 'middle',
+            transform: 'translate(-40, -10)',
+          }}
+        />
+        <AxisBottom
+          top={innerHeight}
+          scale={xScale}
+          stroke="#475569"
+          tickStroke="#475569"
+          tickLabelProps={() => ({
+            fill: '#94a3b8',
+            fontSize: 11,
+            textAnchor: 'middle',
+            dy: '0.33em',
+          })}
+          tickFormat={(value) => DATE_LABEL.format(value as Date)}
+        />
+        <AxisRight
+          left={innerWidth}
+          scale={yRight}
+          stroke="#475569"
+          tickStroke="#475569"
+          tickLabelProps={() => ({
+            fill: '#94a3b8',
+            fontSize: 11,
+            textAnchor: 'start',
+            dy: '0.33em',
+          })}
+          tickFormat={(value) => NUMBER_COMPACT.format(Number(value))}
+          label="Avg gas price (Gwei)"
+          labelProps={{
+            fill: '#94a3b8',
+            fontSize: 10,
+            textAnchor: 'middle',
+            transform: 'translate(36, -10)',
+          }}
+        />
 
-        const xScale = scaleTime({
-          range: [0, innerWidth],
-          domain: [
-            data[0].date,
-            data[data.length - 1].date,
-          ] as [Date, Date],
-        });
+        <LinePath
+          data={data}
+          x={(d) => xScale(d.date)}
+          y={(d) => yLeft(d.avgTxPerBlock)}
+          stroke="#22d3ee"
+          strokeWidth={2}
+        />
 
-        const maxLeft = Math.max(
-          ...data.map((d) => Math.max(d.avgTxPerBlock, d.avgGasUsed / 1_000)),
-        );
-        const yLeft = scaleLinear({
-          range: [innerHeight, 0],
-          domain: [0, maxLeft * 1.1 || 1],
-          nice: true,
-        });
+        <LinePath
+          data={data}
+          x={(d) => xScale(d.date)}
+          y={(d) => yLeft(d.avgGasUsed / 1_000)}
+          stroke="#f97316"
+          strokeWidth={2}
+        />
 
-        const maxRight = Math.max(...data.map((d) => d.avgGasPriceGwei));
-        const yRight = scaleLinear({
-          range: [innerHeight, 0],
-          domain: [0, maxRight * 1.1 || 1],
-          nice: true,
-        });
-
-        return (
-          <svg width={width} height={height}>
-            <Group left={margin.left} top={margin.top}>
-              <AxisLeft
-                scale={yLeft}
-                stroke="#475569"
-                tickStroke="#475569"
-                tickLabelProps={() => ({
-                  fill: '#94a3b8',
-                  fontSize: 11,
-                  textAnchor: 'end',
-                  dy: '0.33em',
-                })}
-                tickFormat={(value) => NUMBER_COMPACT.format(Number(value))}
-                label="Tx / block & gas used (×1k)"
-                labelProps={{
-                  fill: '#94a3b8',
-                  fontSize: 10,
-                  textAnchor: 'middle',
-                  transform: 'translate(-40, -10)',
-                }}
-              />
-              <AxisBottom
-                top={innerHeight}
-                scale={xScale}
-                stroke="#475569"
-                tickStroke="#475569"
-                tickLabelProps={() => ({
-                  fill: '#94a3b8',
-                  fontSize: 11,
-                  textAnchor: 'middle',
-                  dy: '0.33em',
-                })}
-                tickFormat={(value) => DATE_LABEL.format(value as Date)}
-              />
-              <AxisRight
-                left={innerWidth}
-                scale={yRight}
-                stroke="#475569"
-                tickStroke="#475569"
-                tickLabelProps={() => ({
-                  fill: '#94a3b8',
-                  fontSize: 11,
-                  textAnchor: 'start',
-                  dy: '0.33em',
-                })}
-                tickFormat={(value) => NUMBER_COMPACT.format(Number(value))}
-                label="Avg gas price (Gwei)"
-                labelProps={{
-                  fill: '#94a3b8',
-                  fontSize: 10,
-                  textAnchor: 'middle',
-                  transform: 'translate(36, -10)',
-                }}
-              />
-
-              <LinePath
-                data={data}
-                x={(d) => xScale(d.date)}
-                y={(d) => yLeft(d.avgTxPerBlock)}
-                stroke="#22d3ee"
-                strokeWidth={2}
-              />
-
-              <LinePath
-                data={data}
-                x={(d) => xScale(d.date)}
-                y={(d) => yLeft(d.avgGasUsed / 1_000)}
-                stroke="#f97316"
-                strokeWidth={2}
-              />
-
-              <LinePath
-                data={data}
-                x={(d) => xScale(d.date)}
-                y={(d) => yRight(d.avgGasPriceGwei)}
-                stroke="#ef4444"
-                strokeWidth={2}
-              />
-            </Group>
-            <Legend
-              items={[
-                { label: 'Avg tx per block', color: '#22d3ee' },
-                { label: 'Avg gas used (×1k)', color: '#f97316' },
-                { label: 'Avg gas price (Gwei)', color: '#ef4444' },
-              ]}
-            />
-          </svg>
-        );
-      }}
-    </ParentSize>
+        <LinePath
+          data={data}
+          x={(d) => xScale(d.date)}
+          y={(d) => yRight(d.avgGasPriceGwei)}
+          stroke="#ef4444"
+          strokeWidth={2}
+        />
+      </Group>
+      <Legend
+        items={[
+          { label: 'Avg tx per block', color: '#22d3ee' },
+          { label: 'Avg gas used (×1k)', color: '#f97316' },
+          { label: 'Avg gas price (Gwei)', color: '#ef4444' },
+        ]}
+      />
+    </svg>
   );
 }
 
@@ -864,70 +790,68 @@ export function ChainMetricsCharts() {
     status: 'ready',
     data: SAMPLE_CHAIN_METRICS,
     sample: true,
+    error: undefined,
   }));
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       try {
-        const [usersRes, transactionsRes, contractsRes, blocksRes] =
-          await Promise.all([
-            fetch(`${API_BASE}/users`).then((res) =>
-              res.json() as Promise<ApiResponse<UsersDatum>>,
-            ),
-            fetch(`${API_BASE}/transactions`).then((res) =>
-              res.json() as Promise<ApiResponse<TransactionsDatum>>,
-            ),
-            fetch(`${API_BASE}/contract-data`).then((res) =>
-              res.json() as Promise<ApiResponse<ContractDatum>>,
-            ),
-            fetch(`${API_BASE}/block-data`).then((res) =>
-              res.json() as Promise<ApiResponse<BlockDatum>>,
-            ),
-          ]);
-
-          if (cancelled) return;
-
-          const nextData: ChainMetricsData = {
-            users: usersRes.data ?? [],
-            transactions: transactionsRes.data ?? [],
-            contracts: contractsRes.data ?? [],
-            blocks: blocksRes.data ?? [],
-          };
-
-          const hasLiveUsers = nextData.users.length > 0;
-
-          if (!hasLiveUsers) {
-            setState({
-              status: 'error',
-              data: SAMPLE_CHAIN_METRICS,
-              sample: true,
-              error:
-                'Live metrics API returned no user data. Showing recent sample metrics instead.',
-            });
-            return;
-          }
-
-          setState({
-            status: 'ready',
-            data: nextData,
-            sample: false,
-          });
-        } catch (error) {
-          if (cancelled) return;
-          setState((prev) => ({
-            status: 'error',
-            data: prev.data,
-            sample: prev.sample,
-            error:
-              error instanceof Error
-                ? `Unable to load live Plasma metrics: ${error.message}. Showing sample data.`
-                : 'Unable to load live Plasma metrics. Showing sample data.',
-          }));
+        const response = await fetch(API_ROUTE, { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`);
         }
-      };
+        const payload = (await response.json()) as ChainMetricsEnvelope;
 
-      load();
+        if (cancelled) return;
+
+        const nextData: ChainMetricsData = {
+          users: payload.users ?? [],
+          transactions: payload.transactions ?? [],
+          contracts: payload.contracts ?? [],
+          blocks: payload.blocks ?? [],
+        };
+
+        const warning =
+          payload.errors && payload.errors.length
+            ? `Some Plasma metrics failed to load: ${payload.errors.join('; ')}.`
+            : undefined;
+
+        const hasLiveUsers = nextData.users.length > 0;
+
+        if (!hasLiveUsers) {
+          setState({
+            status: 'error',
+            data: SAMPLE_CHAIN_METRICS,
+            sample: true,
+            error:
+              warning ??
+              'Live metrics API returned no user data. Showing recent sample metrics instead.',
+          });
+          return;
+        }
+
+        setState({
+          status: warning ? 'error' : 'ready',
+          data: nextData,
+          sample: false,
+          error: warning,
+        });
+      } catch (error) {
+        if (cancelled) return;
+        setState((prev) => ({
+          status: 'error',
+          data: prev.data,
+          sample: prev.sample,
+          error:
+            error instanceof Error
+              ? `Unable to load live Plasma metrics: ${error.message}. Showing sample data.`
+              : 'Unable to load live Plasma metrics. Showing sample data.',
+        }));
+      }
+    };
+
+    load();
     return () => {
       cancelled = true;
     };
