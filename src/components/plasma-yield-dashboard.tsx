@@ -50,6 +50,7 @@ const ASSET_ICON_MAP: Record<string, string> = {
   "USD0++": "/assets/usd0++.png",
   "USDT0": "/assets/usdt0.png",
   "WETH": "/assets/weth.svg",
+  "XPL": "/Plasma.png",
 };
 
 const USD_FORMAT = new Intl.NumberFormat("en-US", {

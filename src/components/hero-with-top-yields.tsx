@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Pool = {
   project: string;
@@ -22,6 +30,7 @@ const ASSET_ICON_MAP: Record<string, string> = {
   "USD0++": "/assets/usd0++.png",
   "USDT0": "/assets/usdt0.png",
   "WETH": "/assets/weth.svg",
+  "XPL": "/Plasma.png",
 };
 
 const ALL_ASSETS = [
@@ -59,49 +68,72 @@ const formatUsd = (value: number | null | undefined) => {
 };
 
 export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
-  const [currentAssetIndex, setCurrentAssetIndex] = useState(0);
-  const currentAsset = ALL_ASSETS[currentAssetIndex];
+  const [selectedAsset, setSelectedAsset] = useState<string>(ALL_ASSETS[0]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentAssetIndex((prev) => (prev + 1) % ALL_ASSETS.length);
-    }, 3000); // Rotate every 3 seconds
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Filter pools by current asset and get top 5 by APY
+  // Filter pools by selected asset and get top 5 by APY
   const topPools = pools
-    .filter((pool) => pool.assets.includes(currentAsset))
+    .filter((pool) => pool.assets.includes(selectedAsset))
     .filter((pool) => pool.apy != null && pool.apy > 0)
     .sort((a, b) => (b.apy ?? 0) - (a.apy ?? 0))
     .slice(0, 5);
 
   return (
     <section className="flex w-full flex-col items-center gap-12 text-center">
-      <div className="flex flex-col items-center gap-6 lg:flex-row lg:gap-8">
-        <div className="flex flex-col gap-4">
-          <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
-            Find the best yields on Plasma.
-          </h1>
-          <p className="text-xl text-muted-foreground sm:text-2xl">
-            The best yields for{" "}
-            <span
-              key={currentAsset}
-              className="inline-flex items-center gap-2 font-semibold text-foreground animate-in fade-in duration-500"
-            >
-              {ASSET_ICON_MAP[currentAsset] && (
-                <Image
-                  src={ASSET_ICON_MAP[currentAsset]}
-                  alt={currentAsset}
-                  width={24}
-                  height={24}
-                  className="inline-block rounded-full"
-                />
-              )}
-              {currentAsset}
-            </span>
-          </p>
+      <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-center lg:gap-8">
+        <div className="flex flex-col gap-4 lg:flex-1">
+          <div className="flex items-center justify-center gap-4 lg:justify-start">
+            <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
+              Find the best yields on Plasma.
+            </h1>
+            <Image
+              src="/Plasma.png"
+              alt="Plasma"
+              width={48}
+              height={48}
+              style={{ mixBlendMode: 'difference' }}
+              priority
+              className="hidden lg:block"
+            />
+          </div>
+          <div className="flex items-center justify-center gap-3 text-xl text-muted-foreground sm:text-2xl lg:justify-start">
+            <span>The best yields for</span>
+            <Select value={selectedAsset} onValueChange={setSelectedAsset}>
+              <SelectTrigger className="w-auto inline-flex items-center gap-2 border-none bg-transparent px-2 font-semibold text-foreground hover:bg-accent focus:ring-1 focus:ring-ring">
+                <SelectValue>
+                  <div className="flex items-center gap-2">
+                    {ASSET_ICON_MAP[selectedAsset] && (
+                      <Image
+                        src={ASSET_ICON_MAP[selectedAsset]}
+                        alt={selectedAsset}
+                        width={20}
+                        height={20}
+                        className="inline-block rounded-full"
+                      />
+                    )}
+                    {selectedAsset}
+                  </div>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {ALL_ASSETS.map((asset) => (
+                  <SelectItem key={asset} value={asset}>
+                    <div className="flex items-center gap-2">
+                      {ASSET_ICON_MAP[asset] && (
+                        <Image
+                          src={ASSET_ICON_MAP[asset]}
+                          alt={asset}
+                          width={20}
+                          height={20}
+                          className="inline-block rounded-full"
+                        />
+                      )}
+                      {asset}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <Image
           src="/Plasma.png"
@@ -110,6 +142,7 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
           height={60}
           style={{ mixBlendMode: 'difference' }}
           priority
+          className="lg:hidden"
         />
       </div>
 
@@ -118,7 +151,7 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
           <div className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
             <div className="border-b border-border/60 bg-muted/40 px-6 py-4">
               <h3 className="text-left text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Top 5 {currentAsset} Yields
+                Top 5 {selectedAsset} Yields
               </h3>
             </div>
             <div className="divide-y divide-border/60">
@@ -154,7 +187,7 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
                 href="/dashboard"
                 className="inline-flex items-center gap-2 text-sm font-medium text-primary transition-colors hover:text-primary/80"
               >
-                View all {currentAsset} pools
+                View all {selectedAsset} pools
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
@@ -163,7 +196,7 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
       ) : (
         <div className="w-full max-w-3xl rounded-xl border border-dashed border-border/60 bg-muted/20 px-6 py-12">
           <p className="text-sm text-muted-foreground">
-            No {currentAsset} pools available at this time.
+            No {selectedAsset} pools available at this time.
           </p>
         </div>
       )}
