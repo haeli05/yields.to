@@ -92,6 +92,11 @@ Headers: x-cron-secret: ${AGGREGATOR_SECRET}
 Schedule: 0 * * * *  (every hour)
 ```
 
+The aggregator now collects:
+- DeFiLlama Plasma chain TVL, protocol TVL, and yield pool snapshots (top 50) and stores the trimmed list in KV.
+- Stablewatch Plasma dashboard pools, normalized into `plasma_pool_yield_snapshots` with `source = stablewatch`.
+- Merkl opportunities filtered to `chainId=9745`, saved alongside the other pools with `source = merkl`.
+
 The UI reads from Supabase when configured; if unavailable it falls back to the public APIs.
 
 ### Sumcap Plasma API ingestion

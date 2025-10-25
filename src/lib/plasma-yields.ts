@@ -9,15 +9,27 @@ export type PlasmaYieldPool = {
   tvlUsd: number;
   apy: number | null;
   apyBase?: number | null;
+  apyReward?: number | null;
+  apyPct1D?: number | null;
+  apyPct7D?: number | null;
   apyPct30D?: number | null;
   pool: string;
+  poolMeta?: string | null;
+  il7d?: number | null;
+  apyMean30d?: number | null;
+  volumeUsd1d?: number | null;
+  volumeUsd7d?: number | null;
+  apyBaseInception?: number | null;
+  underlyingTokens?: string[] | null;
+  rewardTokens?: string[] | null;
+  url?: string | null;
 };
 
 const KEY = 'defillama:plasma:yields:top50:v1';
 const TTL_SECONDS = 60 * 15; // 15 minutes
 
 type UpstreamResponse = {
-  data?: PlasmaYieldPool[];
+  data?: unknown;
 };
 
 type LoadOptions = {
@@ -46,33 +58,65 @@ export async function loadPlasmaYields(
   }
 
   const json = (await response.json()) as UpstreamResponse;
-  const trimmed = (json.data ?? [])
-    .filter((pool) => pool.chain === 'Plasma')
-    .sort((a, b) => (b.tvlUsd ?? 0) - (a.tvlUsd ?? 0))
-    .slice(0, 50)
-    .map(
-      ({
-        chain,
-        project,
-        symbol,
-        tvlUsd,
-        apy,
-        apyBase,
-        apyPct30D,
-        pool,
-      }) => ({
-        chain,
-        project,
-        symbol,
-        tvlUsd,
-        apy,
-        apyBase: apyBase ?? null,
-        apyPct30D: apyPct30D ?? null,
-        pool,
-      }),
+  const pools = Array.isArray(json.data) ? json.data : [];
+
+  const normalizeString = (value: unknown, fallback: string): string =>
+    typeof value === 'string' && value.trim().length > 0 ? value : fallback;
+
+  const normalizeNullableString = (value: unknown): string | null =>
+    typeof value === 'string' && value.trim().length > 0 ? value : null;
+
+  const normalizeNumber = (value: unknown, fallback: number): number =>
+    typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+
+  const normalizeNullableNumber = (value: unknown): number | null =>
+    typeof value === 'number' && Number.isFinite(value) ? value : null;
+
+  const normalizeNullableStringArray = (value: unknown): string[] | null => {
+    if (!Array.isArray(value)) return null;
+    const strings = value.filter(
+      (entry): entry is string =>
+        typeof entry === 'string' && entry.trim().length > 0,
     );
+    return strings.length > 0 ? strings : null;
+  };
 
-  await kvSetJson(KEY, trimmed, TTL_SECONDS);
+  const normalized = pools
+    .map((pool): PlasmaYieldPool | null => {
+      if (typeof pool !== 'object' || pool === null) return null;
+      const record = pool as Record<string, unknown>;
+      const chain = normalizeNullableString(record.chain);
+      const poolId = normalizeNullableString(record.pool);
+      if (!chain || !poolId) return null;
 
-  return { data: trimmed, cached: false };
+      return {
+        chain,
+        project: normalizeString(record.project, 'Unknown'),
+        symbol: normalizeString(record.symbol, '—'),
+        tvlUsd: normalizeNumber(record.tvlUsd, 0),
+        apy: normalizeNullableNumber(record.apy),
+        apyBase: normalizeNullableNumber(record.apyBase),
+        apyReward: normalizeNullableNumber(record.apyReward),
+        apyPct1D: normalizeNullableNumber(record.apyPct1D),
+        apyPct7D: normalizeNullableNumber(record.apyPct7D),
+        apyPct30D: normalizeNullableNumber(record.apyPct30D),
+        pool: poolId,
+        poolMeta: normalizeNullableString(record.poolMeta),
+        il7d: normalizeNullableNumber(record.il7d),
+        apyMean30d: normalizeNullableNumber(record.apyMean30d),
+        volumeUsd1d: normalizeNullableNumber(record.volumeUsd1d),
+        volumeUsd7d: normalizeNullableNumber(record.volumeUsd7d),
+        apyBaseInception: normalizeNullableNumber(record.apyBaseInception),
+        underlyingTokens: normalizeNullableStringArray(record.underlyingTokens),
+        rewardTokens: normalizeNullableStringArray(record.rewardTokens),
+        url: normalizeNullableString(record.url),
+      };
+    })
+    .filter((pool): pool is PlasmaYieldPool => pool !== null && pool.chain === 'Plasma')
+    .sort((a, b) => (b.tvlUsd ?? 0) - (a.tvlUsd ?? 0))
+    .slice(0, 50);
+
+  await kvSetJson(KEY, normalized, TTL_SECONDS);
+
+  return { data: normalized, cached: false };
 }

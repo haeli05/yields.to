@@ -2,7 +2,19 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import Link from "next/link";
+import {
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  ExternalLink,
+  Star,
+  StarOff,
+  Download,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +27,17 @@ export type DashboardPool = {
   symbol: string;
   tvlUsd: number;
   apy: number | null;
+  apyBase?: number | null;
+  apyReward?: number | null;
+  apyPct1d?: number | null;
+  apyPct7d?: number | null;
   apyPct30d: number | null;
+  apyMean30d?: number | null;
+  il7d?: number | null;
+  volumeUsd1d?: number | null;
+  volumeUsd7d?: number | null;
+  url?: string | null;
+  rewardTokens?: string[] | null;
   category: string;
   assets: string[];
 };
@@ -75,6 +97,23 @@ const formatPercent = (value: number | null | undefined) => {
   return PERCENT_FORMAT.format(value / 100);
 };
 
+const getTrendIndicator = (apyPct7d: number | null | undefined) => {
+  if (apyPct7d == null) return null;
+  if (apyPct7d > 5) return { icon: TrendingUp, color: "text-green-500", label: "Rising" };
+  if (apyPct7d < -5) return { icon: TrendingDown, color: "text-red-500", label: "Falling" };
+  return { icon: Minus, color: "text-muted-foreground", label: "Stable" };
+};
+
+const getRiskBadge = (tvlUsd: number, il7d: number | null | undefined) => {
+  // Simple risk heuristic: Low TVL or high IL = higher risk
+  const hasIL = il7d != null && Math.abs(il7d) > 1;
+  const lowTVL = tvlUsd < 100_000;
+
+  if (hasIL || lowTVL) return { label: "HIGH", variant: "destructive" as const };
+  if (tvlUsd < 1_000_000) return { label: "MED", variant: "secondary" as const };
+  return { label: "LOW", variant: "outline" as const };
+};
+
 type SortField = "assets" | "project" | "symbol" | "category" | "apy" | "apyPct30d" | "tvlUsd";
 type SortDirection = "asc" | "desc" | null;
 
@@ -86,6 +125,55 @@ export function PlasmaYieldDashboard({ pools }: { pools: DashboardPool[] }) {
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<SortField>("tvlUsd");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [minApy, setMinApy] = useState<number>(0);
+  const [favorites, setFavorites] = useState<Set<string>>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("plasma-yield-favorites");
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    }
+    return new Set();
+  });
+
+  const toggleFavorite = (poolId: string) => {
+    const newFavorites = new Set(favorites);
+    if (newFavorites.has(poolId)) {
+      newFavorites.delete(poolId);
+    } else {
+      newFavorites.add(poolId);
+    }
+    setFavorites(newFavorites);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("plasma-yield-favorites", JSON.stringify([...newFavorites]));
+    }
+  };
+
+  const exportToCSV = () => {
+    const headers = ["Project", "Symbol", "Category", "Assets", "APY", "30d Change", "TVL", "Risk", "URL"];
+    const rows = filteredAndSortedPools.map((pool) => [
+      pool.project,
+      pool.symbol,
+      pool.category,
+      pool.assets.join("; "),
+      pool.apy?.toFixed(2) || "—",
+      pool.apyPct30d?.toFixed(2) || "—",
+      pool.tvlUsd.toFixed(2),
+      getRiskBadge(pool.tvlUsd, pool.il7d).label,
+      pool.url || "—",
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `plasma-yields-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -102,10 +190,11 @@ export function PlasmaYieldDashboard({ pools }: { pools: DashboardPool[] }) {
     }
   };
 
-  const filteredAndSortedPools = useMemo(() => {
+  // Step 1: Filter pools
+  const filteredPools = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
-    const filtered = pools.filter((pool) => {
+    return pools.filter((pool) => {
       const matchesAsset =
         assetFilter === "All assets" || pool.assets.includes(assetFilter);
 
@@ -118,15 +207,20 @@ export function PlasmaYieldDashboard({ pools }: { pools: DashboardPool[] }) {
         pool.symbol.toLowerCase().includes(normalizedSearch) ||
         pool.pool.toLowerCase().includes(normalizedSearch);
 
-      return matchesAsset && matchesCategory && matchesSearch;
-    });
+      const matchesMinApy = (pool.apy ?? 0) >= minApy;
 
-    // Apply sorting
+      return matchesAsset && matchesCategory && matchesSearch && matchesMinApy;
+    });
+  }, [assetFilter, categoryFilter, pools, search, minApy]);
+
+  // Step 2: Sort filtered pools
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
+  const filteredAndSortedPools = useMemo(() => {
     if (!sortDirection) {
-      return filtered;
+      return filteredPools;
     }
 
-    return [...filtered].sort((a, b) => {
+    return [...filteredPools].sort((a, b) => {
       let aValue: string | number | null;
       let bValue: string | number | null;
 
@@ -174,7 +268,7 @@ export function PlasmaYieldDashboard({ pools }: { pools: DashboardPool[] }) {
 
       return 0;
     });
-  }, [assetFilter, categoryFilter, pools, search, sortField, sortDirection]);
+  }, [filteredPools, sortField, sortDirection]);
 
   const totalTvl = useMemo(
     () => filteredAndSortedPools.reduce((acc, pool) => acc + (pool.tvlUsd ?? 0), 0),
@@ -190,7 +284,8 @@ export function PlasmaYieldDashboard({ pools }: { pools: DashboardPool[] }) {
             Narrow the dataset by asset, category, or keyword search.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-3">
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-2">
             <label
               htmlFor="asset-select"
@@ -251,6 +346,35 @@ export function PlasmaYieldDashboard({ pools }: { pools: DashboardPool[] }) {
               onChange={(event) => setSearch(event.target.value)}
               className="h-11 border-border/70 bg-background/80"
             />
+          </div>
+          </div>
+
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="flex-1 space-y-2">
+              <label
+                htmlFor="min-apy"
+                className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground"
+              >
+                Min APY (%)
+              </label>
+              <Input
+                id="min-apy"
+                type="number"
+                min="0"
+                step="0.5"
+                value={minApy}
+                onChange={(event) => setMinApy(Number(event.target.value))}
+                className="h-11 border-border/70 bg-background/80"
+                placeholder="0"
+              />
+            </div>
+            <button
+              onClick={exportToCSV}
+              className="inline-flex h-11 items-center gap-2 rounded-md border border-border/70 bg-background/80 px-4 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              <Download className="h-4 w-4" />
+              Export CSV
+            </button>
           </div>
         </CardContent>
       </Card>
@@ -345,6 +469,12 @@ export function PlasmaYieldDashboard({ pools }: { pools: DashboardPool[] }) {
                         {sortField !== "tvlUsd" && <ArrowUpDown className="h-3 w-3 opacity-40" />}
                       </button>
                     </th>
+                    <th className="px-6 py-4 text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                      Risk
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
@@ -380,15 +510,63 @@ export function PlasmaYieldDashboard({ pools }: { pools: DashboardPool[] }) {
                           {pool.category}
                         </Badge>
                       </td>
-                      <td className="px-6 py-4">{formatPercent(pool.apy)}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          {formatPercent(pool.apy)}
+                          {(() => {
+                            const trend = getTrendIndicator(pool.apyPct7d);
+                            if (!trend) return null;
+                            const Icon = trend.icon;
+                            return (
+                              <span title={trend.label}>
+                                <Icon className={`h-3.5 w-3.5 ${trend.color}`} />
+                              </span>
+                            );
+                          })()}
+                        </div>
+                      </td>
                       <td className="px-6 py-4">{formatPercent(pool.apyPct30d)}</td>
                       <td className="px-6 py-4">{formatUsd(pool.tvlUsd)}</td>
+                      <td className="px-6 py-4">
+                        <Badge
+                          variant={getRiskBadge(pool.tvlUsd, pool.il7d).variant}
+                          className="text-xs"
+                        >
+                          {getRiskBadge(pool.tvlUsd, pool.il7d).label}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => toggleFavorite(pool.id)}
+                            className="transition-colors hover:text-primary"
+                            title={favorites.has(pool.id) ? "Remove from favorites" : "Add to favorites"}
+                          >
+                            {favorites.has(pool.id) ? (
+                              <Star className="h-4 w-4 fill-primary text-primary" />
+                            ) : (
+                              <StarOff className="h-4 w-4" />
+                            )}
+                          </button>
+                          {pool.url && (
+                            <Link
+                              href={pool.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="transition-colors hover:text-primary"
+                              title="Visit protocol"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </Link>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                   {filteredAndSortedPools.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={9}
                         className="px-6 py-10 text-center text-sm text-muted-foreground"
                       >
                         No pools found. Adjust your filters or search criteria.

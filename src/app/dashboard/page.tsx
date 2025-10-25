@@ -26,24 +26,6 @@ const detectCategory = (project: string): "DeFi" | "RWA" | "Protocol" => {
   return "DeFi";
 };
 
-const KNOWN_ASSETS = [
-  "USDT",
-  "USDC",
-  "XPL",
-  "sUSDe",
-  "USDe",
-  "WETH",
-  "ETH",
-  "WBTC",
-  "BTC",
-  "DAI",
-  "USDS",
-  "sUSDS",
-  "USD0",
-  "USD0++",
-  "USDT0",
-] as const;
-
 const detectAssets = (symbol: string, project: string) => {
   const searchText = `${symbol} ${project}`;
 
@@ -112,7 +94,17 @@ export default async function DashboardPage() {
         symbol,
         tvlUsd: pool.tvlUsd ?? 0,
         apy: pool.apy ?? null,
+        apyBase: pool.apyBase ?? null,
+        apyReward: pool.apyReward ?? null,
+        apyPct1d: pool.apyPct1D ?? null,
+        apyPct7d: pool.apyPct7D ?? null,
         apyPct30d: pool.apyPct30D ?? null,
+        apyMean30d: pool.apyMean30d ?? null,
+        il7d: pool.il7d ?? null,
+        volumeUsd1d: pool.volumeUsd1d ?? null,
+        volumeUsd7d: pool.volumeUsd7d ?? null,
+        url: pool.url ?? null,
+        rewardTokens: pool.rewardTokens ?? null,
         category: detectCategory(project),
         assets,
       };

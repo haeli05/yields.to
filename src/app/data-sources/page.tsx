@@ -54,22 +54,67 @@ const USD_STANDARD = new Intl.NumberFormat("en-US", {
 
 const DATA_SOURCES = [
   {
-    name: "Plasma Chain TVL",
+    provider: "DeFiLlama",
+    dataset: "Plasma Chain TVL",
     endpoint: "https://api.llama.fi/charts/Plasma",
     description:
       "Historical total value locked for the Plasma chain across all tracked protocols.",
   },
   {
-    name: "Plasma Saving Vaults",
+    provider: "DeFiLlama",
+    dataset: "Plasma Saving Vaults",
     endpoint: "https://api.llama.fi/protocol/plasma-saving-vaults",
     description:
       "Vault-level metrics including historical TVL and token composition for Plasma’s flagship allocator.",
   },
   {
-    name: "Plasma Yield Pools",
+    provider: "DeFiLlama",
+    dataset: "Plasma Yield Pools",
     endpoint: "https://yields.llama.fi/pools?chain=Plasma",
     description:
-      "Programmatic list of yield-bearing pools available on the Plasma chain with APY statistics.",
+      "Programmatic list of yield-bearing pools available on the Plasma chain with APY statistics. Powers the homepage hero and dashboard tables.",
+  },
+  {
+    provider: "SumCap Plasma API",
+    dataset: "Active users",
+    endpoint: "https://api-plasma.sumcap.xyz/api/users",
+    description:
+      "Daily active wallets and cumulative address growth. Feeds the homepage user activity chart via `/api/chain-metrics`.",
+  },
+  {
+    provider: "SumCap Plasma API",
+    dataset: "Transactions",
+    endpoint: "https://api-plasma.sumcap.xyz/api/transactions",
+    description:
+      "Daily and cumulative transaction counts surfaced on the homepage metrics charts.",
+  },
+  {
+    provider: "SumCap Plasma API",
+    dataset: "Contract creations",
+    endpoint: "https://api-plasma.sumcap.xyz/api/contract-data",
+    description:
+      "Deployment counts for new Plasma contracts. Used to track ecosystem growth in the homepage dashboard.",
+  },
+  {
+    provider: "SumCap Plasma API",
+    dataset: "Block-level utilization",
+    endpoint: "https://api-plasma.sumcap.xyz/api/block-data",
+    description:
+      "Average gas price, gas used, and transactions per block metrics powering the chain activity charts.",
+  },
+  {
+    provider: "Merkl incentives",
+    dataset: "Plasma campaign opportunities",
+    endpoint: "https://api.merkl.xyz/v4/opportunities/",
+    description:
+      "Filter by `chainId=9745` or `chain.name=Plasma` to grab on-chain incentive campaigns with TVL, APR, and reward metadata.",
+  },
+  {
+    provider: "Stablewatch",
+    dataset: "Plasma yield dashboard",
+    endpoint: "https://plasma.stablewatch.io/",
+    description:
+      "Curated Plasma vaults and liquidity pools with blended APR and TVL. Scraped hourly via `/api/sources/stablewatch` for cached JSON.",
   },
 ];
 
@@ -177,7 +222,7 @@ export default async function DataSourcesPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 py-16 sm:px-10 lg:px-12">
-      <section className="grid gap-6 md:grid-cols-2">
+      <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="border border-border/60 bg-card">
           <CardHeader>
             <CardTitle>Plasma chain TVL</CardTitle>
@@ -203,6 +248,31 @@ export default async function DataSourcesPage() {
               >
                 {formatUsd(chainDailyChange)}
               </span>
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border border-border/60 bg-card">
+          <CardHeader>
+            <CardTitle>Chain activity metrics</CardTitle>
+            <CardDescription>
+              Homepage charts pull users, transactions, contracts, and block
+              data from SumCap’s public Plasma API.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <p>
+              Endpoint base:{" "}
+              <Link
+                href="https://api-plasma.sumcap.xyz/api"
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                api-plasma.sumcap.xyz/api
+              </Link>
+            </p>
+            <p>
+              Our `/api/chain-metrics` route fans out to the users, transactions,
+              contract-data, and block-data resources and snapshots them hourly.
             </p>
           </CardContent>
         </Card>
@@ -293,26 +363,28 @@ export default async function DataSourcesPage() {
       <section className="space-y-4">
         <div className="flex flex-col gap-2">
           <h2 className="text-2xl font-semibold tracking-tight">
-            DeFiLlama data sources
+            External data sources in use
           </h2>
           <p className="text-sm text-muted-foreground">
-            Endpoints referenced on this page with brief descriptions of what
-            each returns.
+            Primary upstream providers powering homepage charts, yield tables,
+            and cron ingestions.
           </p>
         </div>
         <div className="overflow-hidden rounded-3xl border border-border/60 bg-card">
           <table className="min-w-full divide-y divide-border/60 text-sm">
             <thead className="bg-muted/40">
               <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                <th className="px-6 py-4">Source</th>
+                <th className="px-6 py-4">Provider</th>
+                <th className="px-6 py-4">Dataset</th>
                 <th className="px-6 py-4">Endpoint</th>
                 <th className="px-6 py-4">Description</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
               {DATA_SOURCES.map((source) => (
-                <tr key={source.endpoint} className="hover:bg-muted/30">
-                  <td className="px-6 py-4 font-medium">{source.name}</td>
+                <tr key={`${source.provider}-${source.dataset}`} className="hover:bg-muted/30">
+                  <td className="px-6 py-4 font-medium">{source.provider}</td>
+                  <td className="px-6 py-4">{source.dataset}</td>
                   <td className="px-6 py-4">
                     <Link
                       href={source.endpoint}

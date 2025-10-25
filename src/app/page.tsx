@@ -2,24 +2,6 @@ import { ChainMetricsCharts } from '@/components/chain-metrics-charts';
 import { HeroWithTopYields } from '@/components/hero-with-top-yields';
 import { loadPlasmaYields } from '@/lib/plasma-yields';
 
-const KNOWN_ASSETS = [
-  "USDT",
-  "USDC",
-  "XPL",
-  "sUSDe",
-  "USDe",
-  "WETH",
-  "ETH",
-  "WBTC",
-  "BTC",
-  "DAI",
-  "USDS",
-  "sUSDS",
-  "USD0",
-  "USD0++",
-  "USDT0",
-] as const;
-
 const detectAssets = (symbol: string, project: string) => {
   const searchText = `${symbol} ${project}`;
   const assets: string[] = [];
@@ -50,8 +32,16 @@ const detectAssets = (symbol: string, project: string) => {
   return assets.length > 0 ? assets : ["Other"];
 };
 
+type ApiPool = {
+  chain: string;
+  project: string | null;
+  symbol: string | null;
+  tvlUsd: number;
+  apy: number | null;
+};
+
 export default async function Home() {
-  let apiData: any[] = [];
+  let apiData: ApiPool[] = [];
   try {
     const { data } = await loadPlasmaYields();
     apiData = data;
