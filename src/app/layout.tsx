@@ -6,6 +6,7 @@ import Script from "next/script";
 import "./globals.css";
 
 import { Navbar } from "@/components/navbar";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -85,7 +86,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
@@ -95,10 +96,16 @@ export default function RootLayout({
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
-        <div className="flex min-h-screen flex-col bg-background text-foreground">
-          <Navbar />
-          <div className="flex-1">{children}</div>
-          <footer className="border-t border-border bg-card px-6 py-8">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem={false}
+          disableTransitionOnChange
+        >
+          <div className="flex min-h-screen flex-col bg-background text-foreground">
+            <Navbar />
+            <div className="flex-1">{children}</div>
+            <footer className="border-t border-border bg-card px-6 py-8">
             <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 text-sm sm:flex-row sm:items-center sm:justify-between">
               <nav className="flex flex-wrap items-center gap-4 text-muted-foreground">
                 <Link
@@ -145,6 +152,7 @@ export default function RootLayout({
             </div>
           </footer>
         </div>
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>

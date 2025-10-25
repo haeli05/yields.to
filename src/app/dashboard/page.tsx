@@ -26,11 +26,61 @@ const detectCategory = (project: string): "DeFi" | "RWA" | "Protocol" => {
   return "DeFi";
 };
 
-const KNOWN_ASSETS = ["USDT", "USDC", "XPL"] as const;
+const KNOWN_ASSETS = [
+  "USDT",
+  "USDC",
+  "XPL",
+  "sUSDe",
+  "USDe",
+  "WETH",
+  "ETH",
+  "WBTC",
+  "BTC",
+  "DAI",
+  "USDS",
+  "sUSDS",
+  "USD0",
+  "USD0++",
+  "USDT0",
+] as const;
 
 const detectAssets = (symbol: string, project: string) => {
-  const upper = `${symbol} ${project}`.toUpperCase();
-  const assets = KNOWN_ASSETS.filter((asset) => upper.includes(asset));
+  const searchText = `${symbol} ${project}`;
+
+  // Check for specific assets in order of specificity (more specific first)
+  const assets: string[] = [];
+
+  // Check for compound tokens first (e.g., USD0++ before USD0)
+  if (/USD0\+\+/i.test(searchText)) assets.push("USD0++");
+  else if (/USD0/i.test(searchText)) assets.push("USD0");
+
+  // Check for USDT0
+  if (/USDT0/i.test(searchText)) assets.push("USDT0");
+
+  // Check for Ethena tokens
+  if (/sUSDe/i.test(searchText)) assets.push("sUSDe");
+  else if (/USDe/i.test(searchText)) assets.push("USDe");
+
+  // Check for Sky tokens
+  if (/sUSDS/i.test(searchText)) assets.push("sUSDS");
+  else if (/USDS/i.test(searchText)) assets.push("USDS");
+
+  // Check for stablecoins
+  if (/USDT/i.test(searchText)) assets.push("USDT");
+  if (/USDC/i.test(searchText)) assets.push("USDC");
+  if (/DAI/i.test(searchText)) assets.push("DAI");
+
+  // Check for ETH variants
+  if (/WETH/i.test(searchText)) assets.push("WETH");
+  else if (/\bETH\b/i.test(searchText)) assets.push("ETH");
+
+  // Check for BTC variants
+  if (/WBTC/i.test(searchText)) assets.push("WBTC");
+  else if (/\bBTC\b/i.test(searchText)) assets.push("BTC");
+
+  // Check for XPL
+  if (/XPL/i.test(searchText)) assets.push("XPL");
+
   return assets.length > 0 ? assets : ["Other"];
 };
 

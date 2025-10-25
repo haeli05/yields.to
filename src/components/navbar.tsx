@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function Navbar() {
   return (
@@ -15,22 +16,25 @@ export function Navbar() {
             width={28}
             height={28}
             priority
-            className="h-7 w-7"
+            className="h-7 w-7 dark:invert"
           />
           <span className="hidden text-xl font-semibold tracking-tight lg:inline">
             Yields.to
           </span>
         </Link>
-        <Button
-          asChild
-          size="default"
-          className="bg-foreground text-background hover:bg-foreground/90"
-        >
-          <Link href="/dashboard">
-            Launch dashboard
-            <ArrowUpRight className="ml-2 size-4" />
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <Button
+            asChild
+            size="default"
+            className="bg-foreground text-background hover:bg-foreground/90"
+          >
+            <Link href="/dashboard">
+              Launch dashboard
+              <ArrowUpRight className="ml-2 size-4" />
+            </Link>
+          </Button>
+        </div>
       </div>
     </nav>
   );
