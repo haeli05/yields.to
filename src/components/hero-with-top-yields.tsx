@@ -85,7 +85,7 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
           alt="Plasma"
           width={120}
           height={120}
-          className="dark:invert"
+          style={{ mixBlendMode: 'difference' }}
           priority
         />
         <div className="flex flex-col gap-4">
