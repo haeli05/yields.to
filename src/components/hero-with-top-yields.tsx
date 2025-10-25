@@ -79,15 +79,7 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
 
   return (
     <section className="flex w-full flex-col items-center gap-12 text-center">
-      <div className="flex flex-col items-center gap-6 lg:flex-row lg:gap-12">
-        <Image
-          src="/Plasma.png"
-          alt="Plasma"
-          width={120}
-          height={120}
-          style={{ mixBlendMode: 'difference' }}
-          priority
-        />
+      <div className="flex flex-col items-center gap-6 lg:flex-row lg:gap-8">
         <div className="flex flex-col gap-4">
           <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
             Find the best yields on Plasma.
@@ -111,6 +103,14 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
             </span>
           </p>
         </div>
+        <Image
+          src="/Plasma.png"
+          alt="Plasma"
+          width={60}
+          height={60}
+          style={{ mixBlendMode: 'difference' }}
+          priority
+        />
       </div>
 
       {topPools.length > 0 ? (
