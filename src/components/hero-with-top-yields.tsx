@@ -79,28 +79,38 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
 
   return (
     <section className="flex w-full flex-col items-center gap-12 text-center">
-      <div className="flex flex-col gap-4">
-        <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
-          Find the best yields on Plasma.
-        </h1>
-        <p className="text-xl text-muted-foreground sm:text-2xl">
-          The best yields for{" "}
-          <span
-            key={currentAsset}
-            className="inline-flex items-center gap-2 font-semibold text-foreground animate-in fade-in duration-500"
-          >
-            {ASSET_ICON_MAP[currentAsset] && (
-              <Image
-                src={ASSET_ICON_MAP[currentAsset]}
-                alt={currentAsset}
-                width={24}
-                height={24}
-                className="inline-block rounded-full"
-              />
-            )}
-            {currentAsset}
-          </span>
-        </p>
+      <div className="flex flex-col items-center gap-6 lg:flex-row lg:gap-12">
+        <Image
+          src="/Plasma.png"
+          alt="Plasma"
+          width={120}
+          height={120}
+          className="dark:invert"
+          priority
+        />
+        <div className="flex flex-col gap-4">
+          <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
+            Find the best yields on Plasma.
+          </h1>
+          <p className="text-xl text-muted-foreground sm:text-2xl">
+            The best yields for{" "}
+            <span
+              key={currentAsset}
+              className="inline-flex items-center gap-2 font-semibold text-foreground animate-in fade-in duration-500"
+            >
+              {ASSET_ICON_MAP[currentAsset] && (
+                <Image
+                  src={ASSET_ICON_MAP[currentAsset]}
+                  alt={currentAsset}
+                  width={24}
+                  height={24}
+                  className="inline-block rounded-full"
+                />
+              )}
+              {currentAsset}
+            </span>
+          </p>
+        </div>
       </div>
 
       {topPools.length > 0 ? (
