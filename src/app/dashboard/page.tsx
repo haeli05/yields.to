@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { PlasmaYieldDashboard, type DashboardPool } from "@/components/plasma-yield-dashboard";
 import { loadPlasmaYields, type PlasmaYieldPool } from "@/lib/plasma-yields";
+import type { ChateauMetrics } from "@/app/api/yields/chateau/route";
 
 const PROJECT_CATEGORY_MAP: Record<string, "DeFi" | "RWA" | "Protocol"> = {
   "plasma saving vaults": "Protocol",
@@ -63,6 +64,13 @@ const detectAssets = (symbol: string, project: string) => {
   // Check for XPL
   if (/XPL/i.test(searchText)) assets.push("XPL");
 
+  // Check for schUSD
+  if (/schUSD/i.test(searchText)) assets.push("schUSD");
+  else if (/chUSD/i.test(searchText)) assets.push("chUSD");
+
+  // Check for USDAI
+  if (/USDAI/i.test(searchText)) assets.push("USDAI");
+
   return assets.length > 0 ? assets : ["Other"];
 };
 
@@ -80,7 +88,50 @@ export default async function DashboardPage() {
     // swallow and show empty dataset
   }
 
-  const pools = (apiData ?? [])
+  // Fetch Chateau Capital schUSD yields
+  let chateauData: ChateauMetrics | null = null;
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/yields/chateau`, {
+      next: { revalidate: 1200 }, // Cache for 20 minutes
+    });
+    if (response.ok) {
+      chateauData = await response.json();
+    }
+  } catch {
+    // swallow and continue
+  }
+
+  // Convert Chateau data to pool format
+  const chateauPools: DashboardPool[] = [];
+  if (chateauData) {
+    // Using the 52-week IRR as the main APY
+    const yearlyAPY = chateauData.schUsdFiftyTwoWeekIRR;
+
+    chateauPools.push({
+      id: "chateau-schusd",
+      pool: "schUSD",
+      project: "Chateau Capital",
+      symbol: "schUSD",
+      tvlUsd: chateauData.schUsdNav,
+      apy: yearlyAPY,
+      apyBase: yearlyAPY,
+      apyReward: null,
+      apyPct1d: null,
+      apyPct7d: ((chateauData.schUsdOneWeekIRR / yearlyAPY) * 100) || null,
+      apyPct30d: ((chateauData.schUsdFourWeekIRR / yearlyAPY) * 100) || null,
+      apyMean30d: chateauData.schUsdFourWeekIRR || null,
+      il7d: null,
+      volumeUsd1d: null,
+      volumeUsd7d: null,
+      url: "https://app.chateau.capital",
+      rewardTokens: null,
+      category: "RWA",
+      assets: ["schUSD"],
+    });
+  }
+
+  // Process DeFiLlama pools (filter by Plasma chain)
+  const defiLlamaPools = (apiData ?? [])
     .filter((pool) => pool.chain === "Plasma")
     .map<DashboardPool>((pool) => {
       const project = pool.project || "Unknown";
@@ -108,8 +159,12 @@ export default async function DashboardPage() {
         category: detectCategory(project),
         assets,
       };
-    })
-    .sort((a, b) => b.tvlUsd - a.tvlUsd);
+    });
+
+  // Combine all pools
+  const pools = [...chateauPools, ...defiLlamaPools].sort(
+    (a, b) => b.tvlUsd - a.tvlUsd
+  );
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-16 sm:px-10 lg:px-12">
@@ -118,7 +173,7 @@ export default async function DashboardPage() {
           Plasma Yield Dashboard
         </h1>
         <p className="text-sm text-muted-foreground">
-          Live yield data sourced from the DeFiLlama public API. Filter by asset,
+          Live yield data sourced from DeFiLlama and Chateau Capital APIs. Filter by asset,
           category, or keyword to discover the most compelling opportunities on
           the Plasma chain.
         </p>

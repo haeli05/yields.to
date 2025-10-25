@@ -59,6 +59,8 @@ const ASSET_OPTIONS = [
   "USD0",
   "USD0++",
   "USDT0",
+  "schUSD",
+  "USDAI",
 ] as const;
 const CATEGORY_OPTIONS = ["All categories", "DeFi", "RWA", "Protocol"] as const;
 
@@ -73,6 +75,8 @@ const ASSET_ICON_MAP: Record<string, string> = {
   "USDT0": "/assets/usdt0.png",
   "WETH": "/assets/weth.svg",
   "XPL": "/Plasma.png",
+  "schUSD": "/assets/schusd.png",
+  "USDAI": "/assets/usdai.png",
 };
 
 const USD_FORMAT = new Intl.NumberFormat("en-US", {

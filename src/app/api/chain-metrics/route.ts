@@ -111,7 +111,7 @@ export async function GET() {
 
     return NextResponse.json(body, {
       headers: {
-        "Cache-Control": "s-maxage=300, stale-while-revalidate=300",
+        "Cache-Control": "s-maxage=1200, stale-while-revalidate=1200",
       },
     });
   } catch (error) {

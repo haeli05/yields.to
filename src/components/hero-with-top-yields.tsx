@@ -31,6 +31,8 @@ const ASSET_ICON_MAP: Record<string, string> = {
   "USDT0": "/assets/usdt0.png",
   "WETH": "/assets/weth.svg",
   "XPL": "/Plasma.png",
+  "schUSD": "/assets/schusd.png",
+  "USDAI": "/assets/usdai.png",
 };
 
 const ALL_ASSETS = [
@@ -43,6 +45,8 @@ const ALL_ASSETS = [
   "USDT0",
   "WETH",
   "XPL",
+  "schUSD",
+  "USDAI",
 ];
 
 const PERCENT_FORMAT = new Intl.NumberFormat("en-US", {
@@ -98,25 +102,25 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
           <div className="flex items-center justify-center gap-3 text-xl text-muted-foreground sm:text-2xl lg:justify-start">
             <span>The best yields for</span>
             <Select value={selectedAsset} onValueChange={setSelectedAsset}>
-              <SelectTrigger className="w-auto inline-flex items-center gap-2 border-none bg-transparent px-2 font-semibold text-foreground hover:bg-accent focus:ring-1 focus:ring-ring">
+              <SelectTrigger className="w-auto inline-flex items-center gap-2 border-none bg-transparent px-2 text-xl sm:text-2xl font-normal text-muted-foreground hover:bg-accent focus:ring-1 focus:ring-ring transition-colors">
                 <SelectValue>
                   <div className="flex items-center gap-2">
                     {ASSET_ICON_MAP[selectedAsset] && (
                       <Image
                         src={ASSET_ICON_MAP[selectedAsset]}
                         alt={selectedAsset}
-                        width={20}
-                        height={20}
+                        width={24}
+                        height={24}
                         className="inline-block rounded-full"
                       />
                     )}
-                    {selectedAsset}
+                    <span className="font-semibold text-foreground">{selectedAsset}</span>
                   </div>
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95">
                 {ALL_ASSETS.map((asset) => (
-                  <SelectItem key={asset} value={asset}>
+                  <SelectItem key={asset} value={asset} className="text-base">
                     <div className="flex items-center gap-2">
                       {ASSET_ICON_MAP[asset] && (
                         <Image

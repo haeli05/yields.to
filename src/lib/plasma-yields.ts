@@ -26,7 +26,7 @@ export type PlasmaYieldPool = {
 };
 
 const KEY = 'defillama:plasma:yields:top50:v1';
-const TTL_SECONDS = 60 * 15; // 15 minutes
+const TTL_SECONDS = 60 * 20; // 20 minutes
 
 type UpstreamResponse = {
   data?: unknown;

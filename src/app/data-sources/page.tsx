@@ -116,6 +116,13 @@ const DATA_SOURCES = [
     description:
       "Curated Plasma vaults and liquidity pools with blended APR and TVL. Scraped hourly via `/api/sources/stablewatch` for cached JSON.",
   },
+  {
+    provider: "Chateau Capital",
+    dataset: "schUSD yield metrics",
+    endpoint: "https://app.chateau.capital/api/metrics",
+    description:
+      "Real-world asset backed schUSD stablecoin with Internal Rate of Return (IRR) metrics across 1-week, 4-week, and 52-week periods. Integrated into the dashboard via `/api/yields/chateau`.",
+  },
 ];
 
 export const metadata: Metadata = {
