@@ -11,8 +11,6 @@ import {
   TrendingDown,
   Minus,
   ExternalLink,
-  Star,
-  StarOff,
   Download,
 } from "lucide-react";
 
@@ -118,6 +116,29 @@ const getRiskBadge = (tvlUsd: number, il7d: number | null | undefined) => {
   return { label: "LOW", variant: "outline" as const };
 };
 
+// Map project names to their websites
+const PROJECT_WEBSITE_MAP: Record<string, string> = {
+  "Pendle": "https://app.pendle.finance",
+  "Fluid": "https://fluid.instadapp.io",
+  "Aave": "https://app.aave.com",
+  "Ethena": "https://app.ethena.fi",
+  "Chateau Capital": "https://app.chateau.capital",
+};
+
+const getProtocolUrl = (project: string, poolUrl: string | null | undefined): string | null => {
+  if (poolUrl) return poolUrl;
+
+  // Try to find a matching website from the map
+  const normalizedProject = project.toLowerCase();
+  for (const [key, url] of Object.entries(PROJECT_WEBSITE_MAP)) {
+    if (normalizedProject.includes(key.toLowerCase())) {
+      return url;
+    }
+  }
+
+  return null;
+};
+
 type SortField = "assets" | "project" | "symbol" | "category" | "apy" | "apyPct30d" | "tvlUsd";
 type SortDirection = "asc" | "desc" | null;
 
@@ -130,26 +151,6 @@ export function PlasmaYieldDashboard({ pools }: { pools: DashboardPool[] }) {
   const [sortField, setSortField] = useState<SortField>("tvlUsd");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [minApy, setMinApy] = useState<number>(0);
-  const [favorites, setFavorites] = useState<Set<string>>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("plasma-yield-favorites");
-      return saved ? new Set(JSON.parse(saved)) : new Set();
-    }
-    return new Set();
-  });
-
-  const toggleFavorite = (poolId: string) => {
-    const newFavorites = new Set(favorites);
-    if (newFavorites.has(poolId)) {
-      newFavorites.delete(poolId);
-    } else {
-      newFavorites.add(poolId);
-    }
-    setFavorites(newFavorites);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("plasma-yield-favorites", JSON.stringify([...newFavorites]));
-    }
-  };
 
   const exportToCSV = () => {
     const headers = ["Project", "Symbol", "Category", "Assets", "APY", "30d Change", "TVL", "Risk", "URL"];
@@ -477,7 +478,7 @@ export function PlasmaYieldDashboard({ pools }: { pools: DashboardPool[] }) {
                       Risk
                     </th>
                     <th className="px-6 py-4 text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                      Actions
+                      Link
                     </th>
                   </tr>
                 </thead>
@@ -540,30 +541,22 @@ export function PlasmaYieldDashboard({ pools }: { pools: DashboardPool[] }) {
                         </Badge>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => toggleFavorite(pool.id)}
-                            className="transition-colors hover:text-primary"
-                            title={favorites.has(pool.id) ? "Remove from favorites" : "Add to favorites"}
-                          >
-                            {favorites.has(pool.id) ? (
-                              <Star className="h-4 w-4 fill-primary text-primary" />
-                            ) : (
-                              <StarOff className="h-4 w-4" />
-                            )}
-                          </button>
-                          {pool.url && (
+                        {(() => {
+                          const url = getProtocolUrl(pool.project, pool.url);
+                          return url ? (
                             <Link
-                              href={pool.url}
+                              href={url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="transition-colors hover:text-primary"
-                              title="Visit protocol"
+                              className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
                             >
-                              <ExternalLink className="h-4 w-4" />
+                              {pool.url ? "Visit Pool" : "Visit Protocol"}
+                              <ExternalLink className="h-3.5 w-3.5" />
                             </Link>
-                          )}
-                        </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">—</span>
+                          );
+                        })()}
                       </td>
                     </tr>
                   ))}
