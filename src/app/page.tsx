@@ -1,6 +1,6 @@
-import { ChainMetricsCharts } from '@/components/chain-metrics-charts';
 import { HeroWithTopYields } from '@/components/hero-with-top-yields';
 import { loadPlasmaYields } from '@/lib/plasma-yields';
+import type { ChateauMetrics } from '@/app/api/yields/chateau/route';
 
 const detectAssets = (symbol: string, project: string) => {
   const searchText = `${symbol} ${project}`;
@@ -24,10 +24,16 @@ const detectAssets = (symbol: string, project: string) => {
   if (/WETH/i.test(searchText)) assets.push("WETH");
   else if (/\bETH\b/i.test(searchText)) assets.push("ETH");
 
-  if (/WBTC/i.test(searchText)) assets.push("WBTC");
+  if (/pBTC/i.test(searchText)) assets.push("pBTC");
+  else if (/WBTC/i.test(searchText)) assets.push("WBTC");
   else if (/\bBTC\b/i.test(searchText)) assets.push("BTC");
 
   if (/XPL/i.test(searchText)) assets.push("XPL");
+
+  if (/schUSD/i.test(searchText)) assets.push("schUSD");
+  else if (/chUSD/i.test(searchText)) assets.push("chUSD");
+
+  if (/USDAI/i.test(searchText)) assets.push("USDAI");
 
   return assets.length > 0 ? assets : ["Other"];
 };
@@ -49,7 +55,21 @@ export default async function Home() {
     // swallow and show empty dataset
   }
 
-  const pools = (apiData ?? [])
+  // Fetch Chateau Capital schUSD yields
+  let chateauData: ChateauMetrics | null = null;
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/yields/chateau`, {
+      next: { revalidate: 1200 }, // Cache for 20 minutes
+    });
+    if (response.ok) {
+      chateauData = await response.json();
+    }
+  } catch {
+    // swallow and continue
+  }
+
+  // Build pools array from DeFiLlama data
+  const defiLlamaPools = (apiData ?? [])
     .filter((pool) => pool.chain === "Plasma")
     .map((pool) => {
       const project = pool.project || "Unknown";
@@ -64,12 +84,21 @@ export default async function Home() {
       };
     });
 
+  // Add Chateau schUSD pool
+  const chateauPools = chateauData ? [{
+    project: "Chateau Capital",
+    symbol: "schUSD",
+    tvlUsd: chateauData.schUsdNav,
+    apy: chateauData.schUsdFiftyTwoWeekIRR,
+    assets: ["schUSD"],
+  }] : [];
+
+  // Combine all pools
+  const pools = [...chateauPools, ...defiLlamaPools];
+
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-16 px-6 py-24 sm:px-8 lg:px-12">
       <HeroWithTopYields pools={pools} />
-      <div className="w-full">
-        <ChainMetricsCharts />
-      </div>
     </main>
   );
 }

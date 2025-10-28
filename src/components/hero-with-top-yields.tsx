@@ -22,6 +22,7 @@ type Pool = {
 };
 
 const ASSET_ICON_MAP: Record<string, string> = {
+  "USD Stablecoins": "/assets/usdc.png", // Use USDC icon for aggregated stablecoins
   "USDT": "/assets/tether.svg",
   "USDC": "/assets/usdc.png",
   "sUSDe": "/assets/susde.png",
@@ -33,18 +34,25 @@ const ASSET_ICON_MAP: Record<string, string> = {
   "XPL": "/Plasma.png",
   "schUSD": "/assets/schusd.png",
   "USDAI": "/assets/usdai.png",
+  "pBTC": "/assets/wbtc.svg", // Using WBTC icon as placeholder for pBTC
 };
 
 const ALL_ASSETS = [
-  "USDT",
-  "USDC",
-  "sUSDe",
-  "USDe",
-  "USD0",
-  "USD0++",
-  "USDT0",
+  "USD Stablecoins",
   "WETH",
   "XPL",
+  "pBTC",
+];
+
+// All stablecoins that should be aggregated under "USD Stablecoins"
+const USD_STABLECOINS = [
+  "USDT",
+  "USDC",
+  "USDe",
+  "USD0",
+  "USDT0",
+  "sUSDe",
+  "USD0++",
   "schUSD",
   "USDAI",
 ];
@@ -76,7 +84,13 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
 
   // Filter pools by selected asset and get top 5 by APY
   const topPools = pools
-    .filter((pool) => pool.assets.includes(selectedAsset))
+    .filter((pool) => {
+      if (selectedAsset === "USD Stablecoins") {
+        // For USD Stablecoins, include pools that have any USD stablecoin
+        return pool.assets.some((asset) => USD_STABLECOINS.includes(asset));
+      }
+      return pool.assets.includes(selectedAsset);
+    })
     .filter((pool) => pool.apy != null && pool.apy > 0)
     .sort((a, b) => (b.apy ?? 0) - (a.apy ?? 0))
     .slice(0, 5);
@@ -158,33 +172,42 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
                 Top 5 {selectedAsset} Yields
               </h3>
             </div>
-            <div className="divide-y divide-border/60">
-              {topPools.map((pool, index) => (
-                <div
-                  key={`${pool.project}-${pool.symbol}-${index}`}
-                  className="flex items-center justify-between px-6 py-4 transition-colors hover:bg-muted/30"
-                >
-                  <div className="flex items-center gap-4">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                      {index + 1}
-                    </span>
-                    <div className="text-left">
-                      <div className="font-medium">{pool.project}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {pool.symbol}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-semibold text-green-500">
-                      {formatPercent(pool.apy)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {formatUsd(pool.tvlUsd)} TVL
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b border-border/60 bg-muted/20">
+                  <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
+                    <th className="px-6 py-3 font-semibold">#</th>
+                    <th className="px-6 py-3 font-semibold">APY % (30d)</th>
+                    <th className="px-6 py-3 font-semibold">Protocol</th>
+                    <th className="px-6 py-3 font-semibold">Name</th>
+                    <th className="px-6 py-3 text-right font-semibold">TVL</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {topPools.map((pool, index) => (
+                    <tr
+                      key={`${pool.project}-${pool.symbol}-${index}`}
+                      className="transition-colors hover:bg-muted/30"
+                    >
+                      <td className="px-6 py-4">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                          {index + 1}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-base font-semibold text-green-500">
+                          {formatPercent(pool.apy)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 font-medium">{pool.project}</td>
+                      <td className="px-6 py-4 text-muted-foreground">{pool.symbol}</td>
+                      <td className="px-6 py-4 text-right font-medium">
+                        {formatUsd(pool.tvlUsd)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
             <div className="border-t border-border/60 bg-muted/20 px-6 py-4">
               <Link

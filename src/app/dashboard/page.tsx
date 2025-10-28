@@ -104,12 +104,25 @@ export default async function DashboardPage() {
   // Convert Chateau data to pool format
   const chateauPools: DashboardPool[] = [];
   if (chateauData) {
-    // Using the 52-week IRR as the main APY
+    // Using the 52-week IRR as the main APY (annualized)
     const yearlyAPY = chateauData.schUsdFiftyTwoWeekIRR;
+    const fourWeekAPY = chateauData.schUsdFourWeekIRR;
+    const oneWeekAPY = chateauData.schUsdOneWeekIRR;
+
+    // Calculate percentage changes: (current - previous) / previous * 100
+    // 7d change: how much 1-week IRR differs from 52-week IRR as a percentage
+    const apyPct7d = yearlyAPY > 0
+      ? ((oneWeekAPY - yearlyAPY) / yearlyAPY * 100)
+      : null;
+
+    // 30d change: how much 4-week IRR differs from 52-week IRR as a percentage
+    const apyPct30d = yearlyAPY > 0
+      ? ((fourWeekAPY - yearlyAPY) / yearlyAPY * 100)
+      : null;
 
     chateauPools.push({
       id: "chateau-schusd",
-      pool: "schUSD",
+      pool: "schUSD Vault",
       project: "Chateau Capital",
       symbol: "schUSD",
       tvlUsd: chateauData.schUsdNav,
@@ -117,9 +130,9 @@ export default async function DashboardPage() {
       apyBase: yearlyAPY,
       apyReward: null,
       apyPct1d: null,
-      apyPct7d: ((chateauData.schUsdOneWeekIRR / yearlyAPY) * 100) || null,
-      apyPct30d: ((chateauData.schUsdFourWeekIRR / yearlyAPY) * 100) || null,
-      apyMean30d: chateauData.schUsdFourWeekIRR || null,
+      apyPct7d,
+      apyPct30d,
+      apyMean30d: fourWeekAPY, // 4-week average APY
       il7d: null,
       volumeUsd1d: null,
       volumeUsd7d: null,

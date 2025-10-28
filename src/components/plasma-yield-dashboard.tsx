@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -12,6 +12,8 @@ import {
   Minus,
   ExternalLink,
   Download,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -142,6 +144,233 @@ const getProtocolUrl = (project: string, poolUrl: string | null | undefined): st
 type SortField = "assets" | "project" | "symbol" | "category" | "apy" | "apyPct30d" | "tvlUsd";
 type SortDirection = "asc" | "desc" | null;
 
+// Expandable row detail component
+function PoolDetailPanel({ pool }: { pool: DashboardPool }) {
+  return (
+    <div className="bg-muted/20 p-6">
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Left Column: Protocol & Asset Details */}
+        <div className="space-y-4">
+          <div>
+            <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Protocol Information
+            </h4>
+            <div className="space-y-2 rounded-lg border border-border/40 bg-card/50 p-4">
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Project</span>
+                <span className="text-sm font-medium">{pool.project}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Pool Name</span>
+                <span className="text-sm font-medium">{pool.pool}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Symbol</span>
+                <span className="text-sm font-medium">{pool.symbol}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Category</span>
+                <Badge variant="outline" className="border-dashed">
+                  {pool.category}
+                </Badge>
+              </div>
+              {pool.url && (
+                <div className="flex justify-between pt-2">
+                  <Link
+                    href={pool.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                  >
+                    Visit Pool
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Assets
+            </h4>
+            <div className="flex flex-wrap gap-2 rounded-lg border border-border/40 bg-card/50 p-4">
+              {pool.assets.map((asset) => {
+                const iconPath = ASSET_ICON_MAP[asset];
+                return iconPath ? (
+                  <div
+                    key={asset}
+                    className="flex items-center gap-2 rounded-md border border-border/40 bg-background/60 px-3 py-2"
+                  >
+                    <Image
+                      src={iconPath}
+                      alt={asset}
+                      width={20}
+                      height={20}
+                      className="rounded-full"
+                    />
+                    <span className="text-sm font-medium">{asset}</span>
+                  </div>
+                ) : (
+                  <Badge key={asset} variant="secondary" className="bg-muted/60">
+                    {asset}
+                  </Badge>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Metrics */}
+        <div className="space-y-4">
+          <div>
+            <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Yield Metrics
+            </h4>
+            <div className="grid gap-3">
+              <div className="rounded-lg border border-border/40 bg-card/50 p-4">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Current APY
+                </div>
+                <div className="mt-1 flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-green-500">
+                    {formatPercent(pool.apy)}
+                  </span>
+                  {(() => {
+                    const trend = getTrendIndicator(pool.apyPct7d);
+                    if (!trend) return null;
+                    const Icon = trend.icon;
+                    return (
+                      <span title={trend.label} className="flex items-center gap-1">
+                        <Icon className={`h-4 w-4 ${trend.color}`} />
+                        <span className="text-xs text-muted-foreground">{trend.label}</span>
+                      </span>
+                    );
+                  })()}
+                </div>
+                {pool.apyBase != null && (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Base: {formatPercent(pool.apyBase)}
+                    {pool.apyReward != null && ` | Rewards: ${formatPercent(pool.apyReward)}`}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg border border-border/40 bg-card/50 p-4">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                    7d Change
+                  </div>
+                  <div className="mt-1 text-lg font-semibold">
+                    {formatPercent(pool.apyPct7d)}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-border/40 bg-card/50 p-4">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                    30d Change
+                  </div>
+                  <div className="mt-1 text-lg font-semibold">
+                    {formatPercent(pool.apyPct30d)}
+                  </div>
+                </div>
+              </div>
+
+              {pool.apyMean30d != null && (
+                <div className="rounded-lg border border-border/40 bg-card/50 p-4">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                    30d Mean APY
+                  </div>
+                  <div className="mt-1 text-lg font-semibold">
+                    {formatPercent(pool.apyMean30d)}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              TVL & Volume
+            </h4>
+            <div className="grid gap-3">
+              <div className="rounded-lg border border-border/40 bg-card/50 p-4">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Total Value Locked
+                </div>
+                <div className="mt-1 text-2xl font-bold">
+                  {formatUsd(pool.tvlUsd)}
+                </div>
+              </div>
+
+              {(pool.volumeUsd1d != null || pool.volumeUsd7d != null) && (
+                <div className="grid grid-cols-2 gap-3">
+                  {pool.volumeUsd1d != null && (
+                    <div className="rounded-lg border border-border/40 bg-card/50 p-4">
+                      <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                        24h Volume
+                      </div>
+                      <div className="mt-1 text-sm font-semibold">
+                        {formatUsd(pool.volumeUsd1d)}
+                      </div>
+                    </div>
+                  )}
+                  {pool.volumeUsd7d != null && (
+                    <div className="rounded-lg border border-border/40 bg-card/50 p-4">
+                      <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                        7d Volume
+                      </div>
+                      <div className="mt-1 text-sm font-semibold">
+                        {formatUsd(pool.volumeUsd7d)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {pool.il7d != null && (
+                <div className="rounded-lg border border-border/40 bg-card/50 p-4">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                    7d Impermanent Loss
+                  </div>
+                  <div className="mt-1 text-lg font-semibold text-amber-500">
+                    {formatPercent(pool.il7d)}
+                  </div>
+                </div>
+              )}
+
+              <div className="rounded-lg border border-border/40 bg-card/50 p-4">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Risk Level
+                </div>
+                <div className="mt-2">
+                  <Badge variant={getRiskBadge(pool.tvlUsd, pool.il7d).variant}>
+                    {getRiskBadge(pool.tvlUsd, pool.il7d).label}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {pool.rewardTokens && pool.rewardTokens.length > 0 && (
+        <div className="mt-6">
+          <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            Reward Tokens
+          </h4>
+          <div className="flex flex-wrap gap-2 rounded-lg border border-border/40 bg-card/50 p-4">
+            {pool.rewardTokens.map((token) => (
+              <Badge key={token} variant="secondary">
+                {token}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function PlasmaYieldDashboard({ pools }: { pools: DashboardPool[] }) {
   const [assetFilter, setAssetFilter] =
     useState<(typeof ASSET_OPTIONS)[number]>("All assets");
@@ -151,6 +380,7 @@ export function PlasmaYieldDashboard({ pools }: { pools: DashboardPool[] }) {
   const [sortField, setSortField] = useState<SortField>("tvlUsd");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [minApy, setMinApy] = useState<number>(0);
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
   const exportToCSV = () => {
     const headers = ["Project", "Symbol", "Category", "Assets", "APY", "30d Change", "TVL", "Risk", "URL"];
@@ -483,83 +713,115 @@ export function PlasmaYieldDashboard({ pools }: { pools: DashboardPool[] }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
-                  {filteredAndSortedPools.map((pool) => (
-                    <tr key={pool.id} className="hover:bg-muted/30">
-                      <td className="px-6 py-4">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {pool.assets.map((asset) => {
-                            const iconPath = ASSET_ICON_MAP[asset];
-                            return iconPath ? (
-                              <div key={asset} className="flex items-center gap-1.5">
-                                <Image
-                                  src={iconPath}
-                                  alt={asset}
-                                  width={20}
-                                  height={20}
-                                  className="rounded-full"
-                                />
-                                <span className="text-sm font-medium">{asset}</span>
-                              </div>
-                            ) : (
-                              <Badge key={asset} variant="secondary" className="bg-muted/60">
-                                {asset}
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">{pool.project}</td>
-                      <td className="px-6 py-4">{pool.symbol}</td>
-                      <td className="px-6 py-4">
-                        <Badge variant="outline" className="border-dashed">
-                          {pool.category}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          {formatPercent(pool.apy)}
-                          {(() => {
-                            const trend = getTrendIndicator(pool.apyPct7d);
-                            if (!trend) return null;
-                            const Icon = trend.icon;
-                            return (
-                              <span title={trend.label}>
-                                <Icon className={`h-3.5 w-3.5 ${trend.color}`} />
-                              </span>
-                            );
-                          })()}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">{formatPercent(pool.apyPct30d)}</td>
-                      <td className="px-6 py-4">{formatUsd(pool.tvlUsd)}</td>
-                      <td className="px-6 py-4">
-                        <Badge
-                          variant={getRiskBadge(pool.tvlUsd, pool.il7d).variant}
-                          className="text-xs"
+                  {filteredAndSortedPools.map((pool) => {
+                    const isExpanded = expandedRow === pool.id;
+                    return (
+                      <React.Fragment key={pool.id}>
+                        <tr
+                          onClick={() => setExpandedRow(isExpanded ? null : pool.id)}
+                          className="cursor-pointer transition-colors hover:bg-muted/30"
                         >
-                          {getRiskBadge(pool.tvlUsd, pool.il7d).label}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4">
-                        {(() => {
-                          const url = getProtocolUrl(pool.project, pool.url);
-                          return url ? (
-                            <Link
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedRow(isExpanded ? null : pool.id);
+                                }}
+                                className="text-muted-foreground transition-colors hover:text-foreground"
+                                aria-label={isExpanded ? "Collapse row" : "Expand row"}
+                              >
+                                {isExpanded ? (
+                                  <ChevronUp className="h-4 w-4" />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4" />
+                                )}
+                              </button>
+                              <div className="flex flex-wrap items-center gap-2">
+                                {pool.assets.map((asset) => {
+                                  const iconPath = ASSET_ICON_MAP[asset];
+                                  return iconPath ? (
+                                    <div key={asset} className="flex items-center gap-1.5">
+                                      <Image
+                                        src={iconPath}
+                                        alt={asset}
+                                        width={20}
+                                        height={20}
+                                        className="rounded-full"
+                                      />
+                                      <span className="text-sm font-medium">{asset}</span>
+                                    </div>
+                                  ) : (
+                                    <Badge key={asset} variant="secondary" className="bg-muted/60">
+                                      {asset}
+                                    </Badge>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">{pool.project}</td>
+                          <td className="px-6 py-4">{pool.symbol}</td>
+                          <td className="px-6 py-4">
+                            <Badge variant="outline" className="border-dashed">
+                              {pool.category}
+                            </Badge>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              {formatPercent(pool.apy)}
+                              {(() => {
+                                const trend = getTrendIndicator(pool.apyPct7d);
+                                if (!trend) return null;
+                                const Icon = trend.icon;
+                                return (
+                                  <span title={trend.label}>
+                                    <Icon className={`h-3.5 w-3.5 ${trend.color}`} />
+                                  </span>
+                                );
+                              })()}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">{formatPercent(pool.apyPct30d)}</td>
+                          <td className="px-6 py-4">{formatUsd(pool.tvlUsd)}</td>
+                          <td className="px-6 py-4">
+                            <Badge
+                              variant={getRiskBadge(pool.tvlUsd, pool.il7d).variant}
+                              className="text-xs"
                             >
-                              {pool.url ? "Visit Pool" : "Visit Protocol"}
-                              <ExternalLink className="h-3.5 w-3.5" />
-                            </Link>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">—</span>
-                          );
-                        })()}
-                      </td>
-                    </tr>
-                  ))}
+                              {getRiskBadge(pool.tvlUsd, pool.il7d).label}
+                            </Badge>
+                          </td>
+                          <td className="px-6 py-4">
+                            {(() => {
+                              const url = getProtocolUrl(pool.project, pool.url);
+                              return url ? (
+                                <Link
+                                  href={url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                                >
+                                  {pool.url ? "Visit Pool" : "Visit Protocol"}
+                                  <ExternalLink className="h-3.5 w-3.5" />
+                                </Link>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">—</span>
+                              );
+                            })()}
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr>
+                            <td colSpan={9} className="p-0">
+                              <PoolDetailPanel pool={pool} />
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                   {filteredAndSortedPools.length === 0 ? (
                     <tr>
                       <td
