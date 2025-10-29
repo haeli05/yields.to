@@ -124,6 +124,7 @@ const PROJECT_WEBSITE_MAP: Record<string, string> = {
   "Fluid": "https://fluid.instadapp.io",
   "Aave": "https://app.aave.com",
   "Ethena": "https://app.ethena.fi",
+  "CHATEAU": "https://app.chateau.capital",
   "Chateau Capital": "https://app.chateau.capital",
 };
 

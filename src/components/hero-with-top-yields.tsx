@@ -22,7 +22,7 @@ type Pool = {
 };
 
 const ASSET_ICON_MAP: Record<string, string> = {
-  "USD Stablecoins": "/assets/usdc.png", // Use USDC icon for aggregated stablecoins
+  "USD Stablecoins": "/assets/usdt0.png", // Use USDT0 icon for aggregated stablecoins
   "USDT": "/assets/tether.svg",
   "USDC": "/assets/usdc.png",
   "sUSDe": "/assets/susde.png",
@@ -34,14 +34,15 @@ const ASSET_ICON_MAP: Record<string, string> = {
   "XPL": "/Plasma.png",
   "schUSD": "/assets/schusd.png",
   "USDAI": "/assets/usdai.png",
-  "pBTC": "/assets/wbtc.svg", // Using WBTC icon as placeholder for pBTC
+  "pBTC": "/assets/wbtc.png",
+  "WBTC": "/assets/wbtc.png",
 };
 
 const ALL_ASSETS = [
   "USD Stablecoins",
   "WETH",
   "XPL",
-  "pBTC",
+  "WBTC",
 ];
 
 // All stablecoins that should be aggregated under "USD Stablecoins"
@@ -82,7 +83,7 @@ const formatUsd = (value: number | null | undefined) => {
 export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
   const [selectedAsset, setSelectedAsset] = useState<string>(ALL_ASSETS[0]);
 
-  // Filter pools by selected asset and get top 5 by APY
+  // Filter pools by selected asset and sort by APY
   const topPools = pools
     .filter((pool) => {
       if (selectedAsset === "USD Stablecoins") {
@@ -92,8 +93,7 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
       return pool.assets.includes(selectedAsset);
     })
     .filter((pool) => pool.apy != null && pool.apy > 0)
-    .sort((a, b) => (b.apy ?? 0) - (a.apy ?? 0))
-    .slice(0, 5);
+    .sort((a, b) => (b.apy ?? 0) - (a.apy ?? 0));
 
   return (
     <section className="flex w-full flex-col items-center gap-12 text-center">
@@ -132,7 +132,7 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
                   </div>
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent className="animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95">
+              <SelectContent className="animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 duration-400">
                 {ALL_ASSETS.map((asset) => (
                   <SelectItem key={asset} value={asset} className="text-base">
                     <div className="flex items-center gap-2">
@@ -165,11 +165,11 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
       </div>
 
       {topPools.length > 0 ? (
-        <div className="w-full max-w-3xl">
+        <div className="w-full">
           <div className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm">
             <div className="border-b border-border/60 bg-muted/40 px-6 py-4">
               <h3 className="text-left text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Top 5 {selectedAsset} Yields
+                {selectedAsset} Yields
               </h3>
             </div>
             <div className="overflow-x-auto">
@@ -221,7 +221,7 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
           </div>
         </div>
       ) : (
-        <div className="w-full max-w-3xl rounded-xl border border-dashed border-border/60 bg-muted/20 px-6 py-12">
+        <div className="w-full rounded-xl border border-dashed border-border/60 bg-muted/20 px-6 py-12">
           <p className="text-sm text-muted-foreground">
             No {selectedAsset} pools available at this time.
           </p>

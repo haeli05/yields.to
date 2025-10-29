@@ -86,7 +86,7 @@ export default async function Home() {
 
   // Add Chateau schUSD pool
   const chateauPools = chateauData ? [{
-    project: "Chateau Capital",
+    project: "CHATEAU",
     symbol: "schUSD",
     tvlUsd: chateauData.schUsdNav,
     apy: chateauData.schUsdFiftyTwoWeekIRR,

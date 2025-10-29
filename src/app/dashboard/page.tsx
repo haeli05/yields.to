@@ -123,7 +123,7 @@ export default async function DashboardPage() {
     chateauPools.push({
       id: "chateau-schusd",
       pool: "schUSD Vault",
-      project: "Chateau Capital",
+      project: "CHATEAU",
       symbol: "schUSD",
       tvlUsd: chateauData.schUsdNav,
       apy: yearlyAPY,
