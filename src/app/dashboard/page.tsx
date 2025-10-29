@@ -33,6 +33,23 @@ const detectAssets = (symbol: string, project: string) => {
   // Check for specific assets in order of specificity (more specific first)
   const assets: string[] = [];
 
+  // Check for LP pairs with mixed assets (e.g., WXPL-USDT0, XUSD-WAPLAUSDT0)
+  // These should only be tagged with non-stablecoin asset
+  // WAPLAUSDT0 = Wrapped Aura Plasma USDT0 (contains XPL)
+  const isMixedLPPair = /(?:WXPL|WETH|WBTC|XPL|WAPL)[-\/](?:USDT0|USDC|USDT|USDe|USD0)/i.test(searchText) ||
+                        /(?:USDT0|USDC|USDT|USDe|USD0)[-\/](?:WXPL|WETH|WBTC|XPL|WAPL)/i.test(searchText) ||
+                        /(?:XUSD|schUSD|sUSDe|USD0\+\+|USDT0|USDC|USDT)[-\/]WAPL/i.test(searchText) ||
+                        /WAPL[-\/](?:XUSD|schUSD|sUSDe|USD0\+\+|USDT0|USDC|USDT)/i.test(searchText);
+
+  if (isMixedLPPair) {
+    // For mixed LP pairs, only tag the non-stablecoin asset
+    // WAPL tokens contain XPL exposure
+    if (/XPL|WAPL/i.test(searchText)) assets.push("XPL");
+    if (/WETH/i.test(searchText)) assets.push("WETH");
+    if (/WBTC/i.test(searchText)) assets.push("WBTC");
+    return assets.length > 0 ? assets : ["Other"];
+  }
+
   // Check for compound tokens first (e.g., USD0++ before USD0)
   if (/USD0\+\+/i.test(searchText)) assets.push("USD0++");
   else if (/USD0/i.test(searchText)) assets.push("USD0");

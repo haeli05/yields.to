@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseService } from "@/lib/supabase";
 import { kvSetJson } from "@/lib/kv";
 import { scrapeStablewatchPools, type StablewatchPool } from "@/lib/stablewatch";
+import { loadPendlePools } from "@/lib/pendle";
 
 type ChartPoint = {
   date: number | string;
@@ -116,7 +117,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    const [chain, proto, yields, stablewatch, merkl] = await Promise.allSettled([
+    const [chain, proto, yields, stablewatch, merkl, pendle] = await Promise.allSettled([
       fetchJson<ChartPoint[]>("https://api.llama.fi/charts/Plasma"),
       fetchJson<ProtocolResponse>(
         "https://api.llama.fi/protocol/plasma-saving-vaults"
@@ -126,6 +127,7 @@ export async function GET(req: Request) {
       ),
       scrapeStablewatchPools(),
       fetchMerklOpportunities(),
+      loadPendlePools(),
     ]);
 
     const chainData = chain.status === "fulfilled" ? chain.value : [];
@@ -134,6 +136,10 @@ export async function GET(req: Request) {
     const stablewatchData =
       stablewatch.status === "fulfilled" ? stablewatch.value : [];
     const merklData = merkl.status === "fulfilled" ? merkl.value : [];
+    const pendleData =
+      pendle.status === "fulfilled"
+        ? pendle.value
+        : { pools: [], monthly: [], cached: false };
 
     const latestChain = chainData.at(-1) ?? null;
     const previousChain = chainData.at(-2) ?? null;
@@ -220,6 +226,19 @@ export async function GET(req: Request) {
           updated_at: now.toISOString(),
         };
       }),
+      ...pendleData.pools.map((pool) => ({
+        ts: rounded.toISOString(),
+        chain: "Plasma",
+        pool: pool.pool,
+        project: pool.project,
+        symbol: pool.symbol,
+        tvl_usd: pool.tvlUsd,
+        apy: pool.apy,
+        apy_base: null,
+        apy_pct30d: null,
+        source: "pendle",
+        updated_at: now.toISOString(),
+      })),
       ...merklData.map((opportunity, index) => {
         const identifier =
           opportunity.identifier ??
@@ -253,6 +272,26 @@ export async function GET(req: Request) {
       if (upsertErr) throw upsertErr;
     }
 
+    if (pendleData.monthly.length > 0) {
+      const monthlyRows = pendleData.monthly.map((record) => ({
+        month_date: record.monthDate,
+        chain: "Plasma",
+        pool: record.pool,
+        project: record.project,
+        symbol: record.symbol,
+        apy: record.apy,
+        tvl_usd: record.tvlUsd,
+        datapoints: record.datapoints,
+        source: "pendle",
+        updated_at: now.toISOString(),
+      }));
+
+      const { error: monthlyErr } = await supabase
+        .from("plasma_pool_yield_monthly")
+        .upsert(monthlyRows, { onConflict: "month_date,pool,source" });
+      if (monthlyErr) throw monthlyErr;
+    }
+
     return NextResponse.json({
       ok: true,
       upserted: snapshot.ts,
@@ -260,6 +299,7 @@ export async function GET(req: Request) {
         defillama: topPools.length,
         stablewatch: stablewatchData.length,
         merkl: merklData.length,
+        pendle: pendleData.pools.length,
       },
     });
   } catch (error) {

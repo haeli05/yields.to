@@ -40,6 +40,25 @@ create table if not exists public.plasma_pool_yield_snapshots (
 create index if not exists idx_plasma_pool_yield_snapshots_ts on public.plasma_pool_yield_snapshots (ts desc);
 create index if not exists idx_plasma_pool_yield_snapshots_pool on public.plasma_pool_yield_snapshots (pool);
 
+-- Monthly pool yield aggregates (one row per month per pool/source)
+create table if not exists public.plasma_pool_yield_monthly (
+  id bigserial primary key,
+  month_date date not null,
+  chain text not null default 'Plasma',
+  pool text not null,
+  project text,
+  symbol text,
+  apy numeric,
+  tvl_usd numeric,
+  datapoints integer not null default 0,
+  source text not null,
+  updated_at timestamptz not null default now(),
+  unique (month_date, pool, source)
+);
+
+create index if not exists idx_plasma_pool_yield_monthly_month on public.plasma_pool_yield_monthly (month_date desc);
+create index if not exists idx_plasma_pool_yield_monthly_pool on public.plasma_pool_yield_monthly (pool);
+
 -- Source health checks
 create table if not exists public.source_health (
   id bigserial primary key,

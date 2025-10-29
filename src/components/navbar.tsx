@@ -1,9 +1,26 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
+
+const NAV_LINKS = [
+  { label: "Home", href: "/" },
+  { label: "Dashboard", href: "/dashboard" },
+  { label: "Plasma Yields", href: "/plasma-yields" },
+  { label: "Chain Stats", href: "/chain-stats" },
+  { label: "Chain Data", href: "/chain-data" },
+  { label: "Data Sources", href: "/data-sources" },
+];
 
 export function Navbar() {
   return (
@@ -24,16 +41,28 @@ export function Navbar() {
         </Link>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Button
-            asChild
-            size="default"
-            className="bg-foreground text-background hover:bg-foreground/90"
-          >
-            <Link href="/dashboard">
-              Launch dashboard
-              <ArrowUpRight className="ml-2 size-4" />
-            </Link>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="default"
+                className="bg-foreground text-background hover:bg-foreground/90"
+              >
+                Explore
+                <ChevronDown className="ml-2 size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel>Pages</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {NAV_LINKS.map((link) => (
+                <DropdownMenuItem key={link.href} asChild>
+                  <Link href={link.href} className="cursor-pointer">
+                    {link.label}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </nav>

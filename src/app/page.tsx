@@ -6,6 +6,30 @@ const detectAssets = (symbol: string, project: string) => {
   const searchText = `${symbol} ${project}`;
   const assets: string[] = [];
 
+  const pendleMatch = symbol.match(/^(?:PT|YT)[-_]?([A-Za-z0-9]+)/i);
+  if (pendleMatch?.[1]) {
+    assets.push(pendleMatch[1].toUpperCase());
+  }
+
+  // Check for LP pairs with mixed assets (e.g., WXPL-USDT0, XUSD-WAPLAUSDT0)
+  // These should only be tagged with non-stablecoin asset
+  // WAPLAUSDT0 = Wrapped Aura Plasma USDT0 (contains XPL)
+  const isMixedLPPair = /(?:WXPL|WETH|WBTC|XPL|WAPL)[-\/](?:USDT0|USDC|USDT|USDe|USD0)/i.test(searchText) ||
+                        /(?:USDT0|USDC|USDT|USDe|USD0)[-\/](?:WXPL|WETH|WBTC|XPL|WAPL)/i.test(searchText) ||
+                        /(?:XUSD|schUSD|sUSDe|USD0\+\+|USDT0|USDC|USDT)[-\/]WAPL/i.test(searchText) ||
+                        /WAPL[-\/](?:XUSD|schUSD|sUSDe|USD0\+\+|USDT0|USDC|USDT)/i.test(searchText);
+
+  if (isMixedLPPair) {
+    // For mixed LP pairs, only tag the non-stablecoin asset
+    // WAPL tokens contain XPL exposure
+    if (/XPL|WAPL/i.test(searchText)) assets.push("XPL");
+    if (/WETH/i.test(searchText)) assets.push("WETH");
+    if (/WBTC/i.test(searchText)) assets.push("WBTC");
+    if (/pBTC/i.test(searchText)) assets.push("pBTC");
+    return assets.length > 0 ? assets : ["Other"];
+  }
+
+  // Regular asset detection for non-mixed pairs
   if (/USD0\+\+/i.test(searchText)) assets.push("USD0++");
   else if (/USD0/i.test(searchText)) assets.push("USD0");
 

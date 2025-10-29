@@ -81,6 +81,11 @@ SUPABASE_URL=...
 SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
 AGGREGATOR_SECRET=long-random-string
+
+# Optional (Pendle integration)
+PENDLE_SUBGRAPH_URL=https://<your-goldsky-or-codex-endpoint>
+PENDLE_API_BASE_URL=https://api.pendle.finance
+PENDLE_CHAIN_ID=369
 ```
 
 3) Schedule the hourly sync (Vercel Cron example):
@@ -96,6 +101,9 @@ The aggregator now collects:
 - DeFiLlama Plasma chain TVL, protocol TVL, and yield pool snapshots (top 50) and stores the trimmed list in KV.
 - Stablewatch Plasma dashboard pools, normalized into `plasma_pool_yield_snapshots` with `source = stablewatch`.
 - Merkl opportunities filtered to `chainId=9745`, saved alongside the other pools with `source = merkl`.
+- Pendle markets (requires `PENDLE_*` env), including implied-yield history rolled into `plasma_pool_yield_snapshots` and 12-month aggregates stored in `plasma_pool_yield_monthly` with `source = pendle`.
+
+Monthly snapshots are kept per pool/source in `plasma_pool_yield_monthly`, enabling dashboards to render trailing-year performance without re-deriving statistics at request time.
 
 The UI reads from Supabase when configured; if unavailable it falls back to the public APIs.
 
