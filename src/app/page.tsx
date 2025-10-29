@@ -79,10 +79,10 @@ export default async function Home() {
     // swallow and show empty dataset
   }
 
-  // Fetch Chateau Capital schUSD yields
+  // Fetch Chateau Capital schUSD yields directly from their API
   let chateauData: ChateauMetrics | null = null;
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/yields/chateau`, {
+    const response = await fetch('https://app.chateau.capital/api/metrics', {
       next: { revalidate: 1200 }, // Cache for 20 minutes
     });
     if (response.ok) {
