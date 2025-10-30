@@ -18,7 +18,6 @@ const NAV_LINKS = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Plasma Yields", href: "/plasma-yields" },
   { label: "Chain Stats", href: "/chain-stats" },
-  { label: "Chain Data", href: "/chain-data" },
   { label: "Data Sources", href: "/data-sources" },
 ];
 
