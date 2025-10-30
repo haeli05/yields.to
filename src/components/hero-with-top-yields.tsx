@@ -169,12 +169,6 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
       <div className="flex flex-col gap-12">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex max-w-2xl flex-col gap-6 text-center lg:text-left">
-            <Badge
-              variant="secondary"
-              className="mx-auto w-auto rounded-full border-none bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-primary shadow-sm lg:mx-0"
-            >
-              Live Plasma Yields
-            </Badge>
             <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
               Finds the best yields on Plasma.
             </h1>
