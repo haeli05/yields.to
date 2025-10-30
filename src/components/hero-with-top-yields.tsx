@@ -182,6 +182,13 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
               Compare live APYs across protocols and assets in one place.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3 lg:justify-start">
+              <Image
+                src="/Plasma.png"
+                alt="Plasma"
+                width={24}
+                height={24}
+                className="rounded-full"
+              />
               <span className="text-sm text-muted-foreground">Show me</span>
               <Select value={selectedAsset} onValueChange={setSelectedAsset}>
                 <SelectTrigger className="w-fit rounded-full border border-border/50 bg-background/80 px-4 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-background">
