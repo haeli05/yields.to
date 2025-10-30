@@ -1,5 +1,6 @@
 import { HeroWithTopYields } from '@/components/hero-with-top-yields';
 import { loadPlasmaYields } from '@/lib/plasma-yields';
+import { loadPendlePools } from '@/lib/pendle';
 import type { ChateauMetrics } from '@/app/api/yields/chateau/route';
 
 const detectAssets = (symbol: string, project: string) => {
@@ -117,8 +118,23 @@ export default async function Home() {
     assets: ["schUSD"],
   }] : [];
 
+  // Fetch Pendle pools
+  let pendlePools: typeof defiLlamaPools = [];
+  try {
+    const { pools } = await loadPendlePools();
+    pendlePools = pools.map((pool) => ({
+      project: pool.project,
+      symbol: pool.symbol,
+      tvlUsd: pool.tvlUsd,
+      apy: pool.apy,
+      assets: pool.assets,
+    }));
+  } catch (error) {
+    console.error("Failed to load Pendle pools:", error);
+  }
+
   // Combine all pools
-  const pools = [...chateauPools, ...defiLlamaPools];
+  const pools = [...chateauPools, ...pendlePools, ...defiLlamaPools];
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-16 px-6 py-24 sm:px-8 lg:px-12">

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { PlasmaYieldDashboard, type DashboardPool } from "@/components/plasma-yield-dashboard";
 import { loadPlasmaYields, type PlasmaYieldPool } from "@/lib/plasma-yields";
+import { loadPendlePools } from "@/lib/pendle";
 import type { ChateauMetrics } from "@/app/api/yields/chateau/route";
 
 const PROJECT_CATEGORY_MAP: Record<string, "DeFi" | "RWA" | "Protocol"> = {
@@ -105,10 +106,39 @@ export default async function DashboardPage() {
     // swallow and show empty dataset
   }
 
+  // Fetch Pendle pools
+  let pendlePools: DashboardPool[] = [];
+  try {
+    const { pools } = await loadPendlePools();
+    pendlePools = pools.map((pool) => ({
+      id: pool.pool,
+      pool: pool.pool,
+      project: pool.project,
+      symbol: pool.symbol,
+      tvlUsd: pool.tvlUsd,
+      apy: pool.apy,
+      apyBase: pool.apyBase,
+      apyReward: pool.apyReward,
+      apyPct1d: pool.apyPct1d,
+      apyPct7d: pool.apyPct7d,
+      apyPct30d: pool.apyPct30d,
+      apyMean30d: null,
+      il7d: null,
+      volumeUsd1d: null,
+      volumeUsd7d: null,
+      url: `https://app.pendle.finance/trade/pools/${pool.pool}/zap/in?chain=plasma`,
+      rewardTokens: null,
+      category: "DeFi",
+      assets: pool.assets,
+    }));
+  } catch (error) {
+    console.error("Failed to load Pendle pools:", error);
+  }
+
   // Fetch Chateau Capital schUSD yields
   let chateauData: ChateauMetrics | null = null;
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/yields/chateau`, {
+    const response = await fetch('https://app.chateau.capital/api/metrics', {
       next: { revalidate: 1200 }, // Cache for 20 minutes
     });
     if (response.ok) {
@@ -192,7 +222,7 @@ export default async function DashboardPage() {
     });
 
   // Combine all pools
-  const pools = [...chateauPools, ...defiLlamaPools].sort(
+  const pools = [...chateauPools, ...pendlePools, ...defiLlamaPools].sort(
     (a, b) => b.tvlUsd - a.tvlUsd
   );
 
