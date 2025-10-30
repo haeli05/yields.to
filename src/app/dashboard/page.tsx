@@ -135,14 +135,28 @@ export default async function DashboardPage() {
     console.error("Failed to load Pendle pools:", error);
   }
 
-  // Fetch Chateau Capital schUSD yields
+  // Fetch Chateau Capital schUSD yields with historical data
   let chateauData: ChateauMetrics | null = null;
+  let chateauHistorical: any[] = [];
   try {
-    const response = await fetch('https://app.chateau.capital/api/metrics', {
-      next: { revalidate: 1200 }, // Cache for 20 minutes
-    });
-    if (response.ok) {
-      chateauData = await response.json();
+    const [metricsRes, yieldsRes] = await Promise.all([
+      fetch('https://app.chateau.capital/api/metrics', {
+        next: { revalidate: 1200 }, // Cache for 20 minutes
+      }),
+      fetch('https://app.chateau.capital/api/yields', {
+        next: { revalidate: 1200 }, // Cache for 20 minutes
+      }),
+    ]);
+
+    if (metricsRes.ok) {
+      chateauData = await metricsRes.json();
+    }
+
+    if (yieldsRes.ok) {
+      const yieldsData = await yieldsRes.json();
+      if (yieldsData?.success && Array.isArray(yieldsData.data)) {
+        chateauHistorical = yieldsData.data;
+      }
     }
   } catch {
     // swallow and continue
@@ -154,18 +168,30 @@ export default async function DashboardPage() {
     // Using the 52-week IRR as the main APY (annualized)
     const yearlyAPY = chateauData.schUsdFiftyTwoWeekIRR;
     const fourWeekAPY = chateauData.schUsdFourWeekIRR;
-    const oneWeekAPY = chateauData.schUsdOneWeekIRR;
 
-    // Calculate percentage changes: (current - previous) / previous * 100
-    // 7d change: how much 1-week IRR differs from 52-week IRR as a percentage
-    const apyPct7d = yearlyAPY > 0
-      ? ((oneWeekAPY - yearlyAPY) / yearlyAPY * 100)
-      : null;
+    // Calculate percentage changes using historical data
+    let apyPct7d = null;
+    let apyPct30d = null;
 
-    // 30d change: how much 4-week IRR differs from 52-week IRR as a percentage
-    const apyPct30d = yearlyAPY > 0
-      ? ((fourWeekAPY - yearlyAPY) / yearlyAPY * 100)
-      : null;
+    if (chateauHistorical.length >= 2) {
+      // Current week (index 0) vs 1 week ago (index 1)
+      const currentAPY = chateauHistorical[0]?.schUSDFiftyTwoWeekAPY;
+      const oneWeekAgoAPY = chateauHistorical[1]?.schUSDFiftyTwoWeekAPY;
+
+      if (currentAPY != null && oneWeekAgoAPY != null && oneWeekAgoAPY !== 0) {
+        apyPct7d = ((currentAPY - oneWeekAgoAPY) / Math.abs(oneWeekAgoAPY)) * 100;
+      }
+    }
+
+    if (chateauHistorical.length >= 5) {
+      // Current week (index 0) vs 4 weeks ago (index 4)
+      const currentAPY = chateauHistorical[0]?.schUSDFiftyTwoWeekAPY;
+      const fourWeeksAgoAPY = chateauHistorical[4]?.schUSDFiftyTwoWeekAPY;
+
+      if (currentAPY != null && fourWeeksAgoAPY != null && fourWeeksAgoAPY !== 0) {
+        apyPct30d = ((currentAPY - fourWeeksAgoAPY) / Math.abs(fourWeeksAgoAPY)) * 100;
+      }
+    }
 
     chateauPools.push({
       id: "chateau-schusd",

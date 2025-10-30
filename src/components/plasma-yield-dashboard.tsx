@@ -108,7 +108,12 @@ const getTrendIndicator = (apyPct7d: number | null | undefined) => {
   return { icon: Minus, color: "text-muted-foreground", label: "Stable" };
 };
 
-const getRiskBadge = (tvlUsd: number, il7d: number | null | undefined) => {
+const getRiskBadge = (tvlUsd: number, il7d: number | null | undefined, project?: string) => {
+  // Special cases for specific protocols
+  if (project === "CHATEAU" || project === "Chateau Capital") {
+    return { label: "LOW", variant: "outline" as const };
+  }
+
   // Simple risk heuristic: Low TVL or high IL = higher risk
   const hasIL = il7d != null && Math.abs(il7d) > 1;
   const lowTVL = tvlUsd < 100_000;
@@ -344,11 +349,23 @@ function PoolDetailPanel({ pool }: { pool: DashboardPool }) {
                   Risk Level
                 </div>
                 <div className="mt-2">
-                  <Badge variant={getRiskBadge(pool.tvlUsd, pool.il7d).variant}>
-                    {getRiskBadge(pool.tvlUsd, pool.il7d).label}
+                  <Badge variant={getRiskBadge(pool.tvlUsd, pool.il7d, pool.project).variant}>
+                    {getRiskBadge(pool.tvlUsd, pool.il7d, pool.project).label}
                   </Badge>
                 </div>
               </div>
+
+              {getProtocolUrl(pool.project, pool.url) && (
+                <a
+                  href={getProtocolUrl(pool.project, pool.url) || "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Visit Protocol
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -393,7 +410,7 @@ export function PlasmaYieldDashboard({ pools }: { pools: DashboardPool[] }) {
       pool.apy?.toFixed(2) || "—",
       pool.apyPct30d?.toFixed(2) || "—",
       pool.tvlUsd.toFixed(2),
-      getRiskBadge(pool.tvlUsd, pool.il7d).label,
+      getRiskBadge(pool.tvlUsd, pool.il7d, pool.project).label,
       pool.url || "—",
     ]);
 
@@ -787,10 +804,10 @@ export function PlasmaYieldDashboard({ pools }: { pools: DashboardPool[] }) {
                           <td className="px-6 py-4">{formatUsd(pool.tvlUsd)}</td>
                           <td className="px-6 py-4">
                             <Badge
-                              variant={getRiskBadge(pool.tvlUsd, pool.il7d).variant}
+                              variant={getRiskBadge(pool.tvlUsd, pool.il7d, pool.project).variant}
                               className="text-xs"
                             >
-                              {getRiskBadge(pool.tvlUsd, pool.il7d).label}
+                              {getRiskBadge(pool.tvlUsd, pool.il7d, pool.project).label}
                             </Badge>
                           </td>
                           <td className="px-6 py-4">
