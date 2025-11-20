@@ -115,12 +115,6 @@ export default function RootLayout({
                   Home
                 </Link>
                 <Link
-                  href="/dashboard"
-                  className="transition-colors hover:text-primary"
-                >
-                  Dashboard
-                </Link>
-                <Link
                   href="/plasma-yields"
                   className="transition-colors hover:text-primary"
                 >

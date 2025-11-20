@@ -19,7 +19,6 @@ import { AddProjectDialog } from "@/components/add-project-dialog";
 
 const NAV_LINKS = [
   { label: "Home", href: "/" },
-  { label: "Dashboard", href: "/dashboard" },
   { label: "Plasma Yields", href: "/plasma-yields" },
   { label: "Chain Stats", href: "/chain-stats" },
   { label: "Data Sources", href: "/data-sources" },

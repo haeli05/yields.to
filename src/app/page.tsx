@@ -1,7 +1,37 @@
-import { HeroWithTopYields } from '@/components/hero-with-top-yields';
-import { loadPlasmaYields } from '@/lib/plasma-yields';
-import { loadPendlePools } from '@/lib/pendle';
-import type { ChateauMetrics } from '@/app/api/yields/chateau/route';
+import { HeroWithTopYields } from "@/components/hero-with-top-yields";
+import {
+  PlasmaYieldDashboard,
+  type DashboardPool,
+} from "@/components/plasma-yield-dashboard";
+import {
+  loadPlasmaYields,
+  type PlasmaYieldPool,
+} from "@/lib/plasma-yields";
+import { loadPendlePools } from "@/lib/pendle";
+import type { ChateauMetrics } from "@/app/api/yields/chateau/route";
+
+const PROJECT_CATEGORY_MAP: Record<string, "DeFi" | "RWA" | "Protocol"> = {
+  "plasma saving vaults": "Protocol",
+  "plasma usd vault": "Protocol",
+  pendle: "DeFi",
+  "pendle plasma": "DeFi",
+  fluid: "DeFi",
+  aave: "DeFi",
+  ethena: "DeFi",
+  "ethena plasma": "DeFi",
+  "plasma rwa": "RWA",
+  usd0: "RWA",
+};
+
+const detectCategory = (project: string): "DeFi" | "RWA" | "Protocol" => {
+  const normalized = project.toLowerCase();
+  const direct = PROJECT_CATEGORY_MAP[normalized];
+  if (direct) return direct;
+
+  if (normalized.includes("rwa")) return "RWA";
+  if (normalized.includes("protocol")) return "Protocol";
+  return "DeFi";
+};
 
 const detectAssets = (symbol: string, project: string) => {
   const searchText = `${symbol} ${project}`;
@@ -12,17 +42,13 @@ const detectAssets = (symbol: string, project: string) => {
     assets.push(pendleMatch[1].toUpperCase());
   }
 
-  // Check for LP pairs with mixed assets (e.g., WXPL-USDT0, XUSD-WAPLAUSDT0)
-  // These should only be tagged with non-stablecoin asset
-  // WAPLAUSDT0 = Wrapped Aura Plasma USDT0 (contains XPL)
-  const isMixedLPPair = /(?:WXPL|WETH|WBTC|XPL|WAPL)[-\/](?:USDT0|USDC|USDT|USDe|USD0)/i.test(searchText) ||
-                        /(?:USDT0|USDC|USDT|USDe|USD0)[-\/](?:WXPL|WETH|WBTC|XPL|WAPL)/i.test(searchText) ||
-                        /(?:XUSD|schUSD|sUSDe|USD0\+\+|USDT0|USDC|USDT)[-\/]WAPL/i.test(searchText) ||
-                        /WAPL[-\/](?:XUSD|schUSD|sUSDe|USD0\+\+|USDT0|USDC|USDT)/i.test(searchText);
+  const isMixedLPPair =
+    /(?:WXPL|WETH|WBTC|XPL|WAPL)[-\/](?:USDT0|USDC|USDT|USDe|USD0)/i.test(searchText) ||
+    /(?:USDT0|USDC|USDT|USDe|USD0)[-\/](?:WXPL|WETH|WBTC|XPL|WAPL)/i.test(searchText) ||
+    /(?:XUSD|schUSD|sUSDe|USD0\+\+|USDT0|USDC|USDT)[-\/]WAPL/i.test(searchText) ||
+    /WAPL[-\/](?:XUSD|schUSD|sUSDe|USD0\+\+|USDT0|USDC|USDT)/i.test(searchText);
 
   if (isMixedLPPair) {
-    // For mixed LP pairs, only tag the non-stablecoin asset
-    // WAPL tokens contain XPL exposure
     if (/XPL|WAPL/i.test(searchText)) assets.push("XPL");
     if (/WETH/i.test(searchText)) assets.push("WETH");
     if (/WBTC/i.test(searchText)) assets.push("WBTC");
@@ -30,7 +56,6 @@ const detectAssets = (symbol: string, project: string) => {
     return assets.length > 0 ? assets : ["Other"];
   }
 
-  // Regular asset detection for non-mixed pairs
   if (/USD0\+\+/i.test(searchText)) assets.push("USD0++");
   else if (/USD0/i.test(searchText)) assets.push("USD0");
 
@@ -63,16 +88,8 @@ const detectAssets = (symbol: string, project: string) => {
   return assets.length > 0 ? assets : ["Other"];
 };
 
-type ApiPool = {
-  chain: string;
-  project: string | null;
-  symbol: string | null;
-  tvlUsd: number;
-  apy: number | null;
-};
-
 export default async function Home() {
-  let apiData: ApiPool[] = [];
+  let apiData: PlasmaYieldPool[] = [];
   try {
     const { data } = await loadPlasmaYields();
     apiData = data;
@@ -80,65 +97,168 @@ export default async function Home() {
     // swallow and show empty dataset
   }
 
-  // Fetch Chateau Capital schUSD yields directly from their API
-  let chateauData: ChateauMetrics | null = null;
-  try {
-    const response = await fetch('https://app.chateau.capital/api/metrics', {
-      next: { revalidate: 1200 }, // Cache for 20 minutes
-    });
-    if (response.ok) {
-      chateauData = await response.json();
-    }
-  } catch {
-    // swallow and continue
-  }
-
-  // Build pools array from DeFiLlama data
-  const defiLlamaPools = (apiData ?? [])
-    .filter((pool) => pool.chain === "Plasma")
-    .map((pool) => {
-      const project = pool.project || "Unknown";
-      const symbol = pool.symbol || "—";
-      const assets = detectAssets(symbol, project);
-      return {
-        project,
-        symbol,
-        tvlUsd: pool.tvlUsd ?? 0,
-        apy: pool.apy ?? null,
-        assets,
-      };
-    });
-
-  // Add Chateau schUSD pool
-  const chateauPools = chateauData ? [{
-    project: "CHATEAU",
-    symbol: "schUSD",
-    tvlUsd: chateauData.schUsdNav,
-    apy: chateauData.schUsdFiftyTwoWeekIRR,
-    assets: ["schUSD"],
-  }] : [];
-
-  // Fetch Pendle pools
-  let pendlePools: typeof defiLlamaPools = [];
+  let pendlePools: DashboardPool[] = [];
   try {
     const { pools } = await loadPendlePools();
     pendlePools = pools.map((pool) => ({
+      id: pool.pool,
+      pool: pool.pool,
       project: pool.project,
       symbol: pool.symbol,
       tvlUsd: pool.tvlUsd,
       apy: pool.apy,
+      apyBase: pool.apyBase,
+      apyReward: pool.apyReward,
+      apyPct1d: pool.apyPct1d,
+      apyPct7d: pool.apyPct7d,
+      apyPct30d: pool.apyPct30d,
+      apyMean30d: null,
+      il7d: null,
+      volumeUsd1d: null,
+      volumeUsd7d: null,
+      url: `https://app.pendle.finance/trade/pools/${pool.pool}/zap/in?chain=plasma`,
+      rewardTokens: null,
+      category: "DeFi",
       assets: pool.assets,
     }));
   } catch (error) {
     console.error("Failed to load Pendle pools:", error);
   }
 
-  // Combine all pools
-  const pools = [...chateauPools, ...pendlePools, ...defiLlamaPools];
+  let chateauData: ChateauMetrics | null = null;
+  let chateauHistorical: any[] = [];
+  try {
+    const [metricsRes, yieldsRes] = await Promise.all([
+      fetch("https://app.chateau.capital/api/metrics", {
+        next: { revalidate: 1200 },
+      }),
+      fetch("https://app.chateau.capital/api/yields", {
+        next: { revalidate: 1200 },
+      }),
+    ]);
+
+    if (metricsRes.ok) {
+      chateauData = await metricsRes.json();
+    }
+
+    if (yieldsRes.ok) {
+      const yieldsData = await yieldsRes.json();
+      if (yieldsData?.success && Array.isArray(yieldsData.data)) {
+        chateauHistorical = yieldsData.data;
+      }
+    }
+  } catch {
+    // swallow and continue
+  }
+
+  const chateauPools: DashboardPool[] = [];
+  if (chateauData) {
+    const yearlyAPY = chateauData.schUsdFiftyTwoWeekIRR;
+    const fourWeekAPY = chateauData.schUsdFourWeekIRR;
+
+    let apyPct7d = null;
+    let apyPct30d = null;
+
+    if (chateauHistorical.length >= 2) {
+      const currentAPY = chateauHistorical[0]?.schUSDFiftyTwoWeekAPY;
+      const oneWeekAgoAPY = chateauHistorical[1]?.schUSDFiftyTwoWeekAPY;
+
+      if (currentAPY != null && oneWeekAgoAPY != null && oneWeekAgoAPY !== 0) {
+        apyPct7d = ((currentAPY - oneWeekAgoAPY) / Math.abs(oneWeekAgoAPY)) * 100;
+      }
+    }
+
+    if (chateauHistorical.length >= 5) {
+      const currentAPY = chateauHistorical[0]?.schUSDFiftyTwoWeekAPY;
+      const fourWeeksAgoAPY = chateauHistorical[4]?.schUSDFiftyTwoWeekAPY;
+
+      if (currentAPY != null && fourWeeksAgoAPY != null && fourWeeksAgoAPY !== 0) {
+        apyPct30d = ((currentAPY - fourWeeksAgoAPY) / Math.abs(fourWeeksAgoAPY)) * 100;
+      }
+    }
+
+    chateauPools.push({
+      id: "chateau-schusd",
+      pool: "schUSD Vault",
+      project: "CHATEAU",
+      symbol: "schUSD",
+      tvlUsd: chateauData.schUsdNav,
+      apy: yearlyAPY,
+      apyBase: yearlyAPY,
+      apyReward: null,
+      apyPct1d: null,
+      apyPct7d,
+      apyPct30d,
+      apyMean30d: fourWeekAPY,
+      il7d: null,
+      volumeUsd1d: null,
+      volumeUsd7d: null,
+      url: "https://app.chateau.capital",
+      rewardTokens: null,
+      category: "RWA",
+      assets: ["schUSD"],
+    });
+  }
+
+  const defiLlamaPools = (apiData ?? [])
+    .filter((pool) => pool.chain === "Plasma")
+    .map<DashboardPool>((pool) => {
+      const project = pool.project || "Unknown";
+      const symbol = pool.symbol || "—";
+      const id = pool.pool || `${project}:${symbol}`;
+      const assets = detectAssets(symbol, project);
+      return {
+        id,
+        pool: pool.pool || project,
+        project,
+        symbol,
+        tvlUsd: pool.tvlUsd ?? 0,
+        apy: pool.apy ?? null,
+        apyBase: pool.apyBase ?? null,
+        apyReward: pool.apyReward ?? null,
+        apyPct1d: pool.apyPct1D ?? null,
+        apyPct7d: pool.apyPct7D ?? null,
+        apyPct30d: pool.apyPct30D ?? null,
+        apyMean30d: pool.apyMean30d ?? null,
+        il7d: pool.il7d ?? null,
+        volumeUsd1d: pool.volumeUsd1d ?? null,
+        volumeUsd7d: pool.volumeUsd7d ?? null,
+        url: pool.url ?? null,
+        rewardTokens: pool.rewardTokens ?? null,
+        category: detectCategory(project),
+        assets,
+      };
+    });
+
+  const pools = [...chateauPools, ...pendlePools, ...defiLlamaPools].sort(
+    (a, b) => b.tvlUsd - a.tvlUsd,
+  );
+
+  const heroPools = pools.map((pool) => ({
+    project: pool.project,
+    symbol: pool.symbol,
+    apy: pool.apy,
+    tvlUsd: pool.tvlUsd,
+    assets: pool.assets ?? [],
+  }));
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-16 px-6 py-24 sm:px-8 lg:px-12">
-      <HeroWithTopYields pools={pools} />
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 py-16 sm:px-8 lg:px-12">
+      <HeroWithTopYields pools={heroPools} />
+      <section className="space-y-6">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+            Live Plasma data
+          </p>
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            Plasma yield dashboard
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Drill into every tracked pool with filters for asset, category, and on-chain activity.
+          </p>
+        </div>
+        <PlasmaYieldDashboard pools={pools} />
+      </section>
     </main>
   );
 }
