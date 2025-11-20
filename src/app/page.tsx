@@ -88,6 +88,28 @@ const detectAssets = (symbol: string, project: string) => {
   return assets.length > 0 ? assets : ["Other"];
 };
 
+const PERCENT_FORMAT = new Intl.NumberFormat("en-US", {
+  style: "percent",
+  maximumFractionDigits: 2,
+});
+
+const USD_FORMAT = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  notation: "compact",
+  maximumFractionDigits: 2,
+});
+
+const formatPercent = (value: number | null) => {
+  if (value == null) return "—";
+  return PERCENT_FORMAT.format(value / 100);
+};
+
+const formatUsd = (value: number | null | undefined) => {
+  if (value == null) return "—";
+  return USD_FORMAT.format(value);
+};
+
 export default async function Home() {
   let apiData: PlasmaYieldPool[] = [];
   try {
@@ -126,7 +148,7 @@ export default async function Home() {
   }
 
   let chateauData: ChateauMetrics | null = null;
-  let chateauHistorical: any[] = [];
+  let chateauHistorical: ChateauYieldSnapshot[] = [];
   try {
     const [metricsRes, yieldsRes] = await Promise.all([
       fetch("https://app.chateau.capital/api/metrics", {
@@ -142,7 +164,8 @@ export default async function Home() {
     }
 
     if (yieldsRes.ok) {
-      const yieldsData = await yieldsRes.json();
+      const yieldsData: { success?: boolean; data?: ChateauYieldSnapshot[] } =
+        await yieldsRes.json();
       if (yieldsData?.success && Array.isArray(yieldsData.data)) {
         chateauHistorical = yieldsData.data;
       }
@@ -242,23 +265,91 @@ export default async function Home() {
     assets: pool.assets ?? [],
   }));
 
+  const validApyPools = pools.filter((pool) => pool.apy != null && pool.apy > 0);
+  const averageApy =
+    validApyPools.length > 0
+      ? validApyPools.reduce((acc, pool) => acc + (pool.apy ?? 0), 0) / validApyPools.length
+      : null;
+
+  const totalCoverageTvl = pools.reduce((acc, pool) => acc + (pool.tvlUsd ?? 0), 0);
+  const uniqueAssets = new Set(
+    pools.flatMap((pool) => (Array.isArray(pool.assets) ? pool.assets : []))
+  );
+
+  const categoryBreakdown = pools.reduce<Record<string, number>>((acc, pool) => {
+    const category = pool.category ?? "DeFi";
+    acc[category] = (acc[category] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const dominantCategoryEntry = Object.entries(categoryBreakdown).sort(
+    (a, b) => b[1] - a[1],
+  )[0];
+
+  const insights = [
+    {
+      label: "Network breadth",
+      value: `${pools.length} pools`,
+      detail: `${uniqueAssets.size} unique assets tracked`,
+    },
+    {
+      label: "Average APY",
+      value: formatPercent(averageApy),
+      detail: `Across ${validApyPools.length} live pools`,
+    },
+    {
+      label: "Dominant sector",
+      value: dominantCategoryEntry ? dominantCategoryEntry[0] : "—",
+      detail: dominantCategoryEntry
+        ? `${Math.round((dominantCategoryEntry[1] / pools.length) * 100)}% of coverage`
+        : "Awaiting data",
+    },
+  ];
+
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 py-16 sm:px-8 lg:px-12">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-12 sm:px-6 lg:px-10">
       <HeroWithTopYields pools={heroPools} />
+      <section className="grid gap-4 md:grid-cols-3">
+        {insights.map((insight, index) => (
+          <div key={insight.label} className="rounded-3xl bg-card p-6 shadow-[0_12px_32px_rgba(0,0,0,0.2)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">
+              {insight.label}
+            </p>
+            <p className="mt-3 text-3xl font-semibold tracking-tight">{insight.value}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{insight.detail}</p>
+            <p className="mt-6 text-[11px] font-mono uppercase tracking-[0.3em] text-muted-foreground">
+              {String(index + 1).padStart(2, "0")}
+            </p>
+          </div>
+        ))}
+      </section>
       <section className="space-y-6">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+        <div className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">
             Live Plasma data
           </p>
-          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Plasma yield dashboard
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Drill into every tracked pool with filters for asset, category, and on-chain activity.
-          </p>
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                Plasma yield dashboard
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground sm:text-base">
+                Drill into every tracked pool with multi-asset filters, historical deltas, and TVL
+                telemetry. Updated continuously.
+              </p>
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">
+              Total coverage {formatUsd(totalCoverageTvl)}
+            </p>
+          </div>
         </div>
-        <PlasmaYieldDashboard pools={pools} />
+        <div className="rounded-3xl bg-card p-3 shadow-[0_20px_60px_rgba(0,0,0,0.25)]">
+          <PlasmaYieldDashboard pools={pools} />
+        </div>
       </section>
     </main>
   );
 }
+type ChateauYieldSnapshot = {
+  schUSDFiftyTwoWeekAPY?: number | null;
+};

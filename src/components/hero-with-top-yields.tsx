@@ -152,75 +152,83 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
   const selectedAssetLabel = selectedAsset === "All Pools" ? "Plasma" : selectedAsset;
 
   return (
-    <section className="w-full rounded-2xl border border-border/60 bg-card/40 p-8 text-left sm:p-10 lg:p-12">
-      <div className="flex flex-col gap-8">
-        <div className="space-y-4 text-center lg:text-left">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+    <section className="rounded-3xl bg-card p-6 shadow-[0_15px_40px_rgba(0,0,0,0.25)] sm:p-10">
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+        <div className="space-y-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">
             Live yields
           </p>
-          <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
-            Find the best yields on Plasma.
-          </h1>
-          <p className="text-base text-muted-foreground sm:text-lg">
-            Compare real-time APYs across every tracked protocol and asset class.
-          </p>
-        </div>
+          <div className="space-y-4">
+            <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl">
+              Find the best yields on Plasma.
+            </h1>
+            <p className="text-base text-muted-foreground sm:text-lg">
+              Stream live APYs, compare liquidity, and focus on the assets that matter most with a
+              clean interface built for daily monitoring.
+            </p>
+          </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground lg:justify-start">
-          <span>Show me</span>
-          <Select value={selectedAsset} onValueChange={setSelectedAsset}>
-            <SelectTrigger className="w-fit rounded-full border border-border/60 bg-background px-4 py-2 text-sm font-medium text-foreground">
-              <SelectValue>
-                <div className="flex items-center gap-3">
-                  <Image
-                    src={ASSET_ICON_MAP[selectedAsset] ?? DEFAULT_ICON}
-                    alt={selectedAsset}
-                    width={24}
-                    height={24}
-                    className="rounded-full"
-                  />
-                  <span className="font-semibold">{selectedAsset}</span>
-                </div>
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent className="w-56">
-              {ASSET_FILTERS.map((asset) => (
-                <SelectItem key={asset} value={asset} className="text-sm">
+          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+            <span className="text-xs uppercase tracking-[0.3em]">Focus asset</span>
+            <Select value={selectedAsset} onValueChange={setSelectedAsset}>
+              <SelectTrigger className="w-fit rounded-full border-0 bg-muted/20 px-5 py-2 text-sm font-medium">
+                <SelectValue>
                   <div className="flex items-center gap-3">
                     <Image
-                      src={ASSET_ICON_MAP[asset] ?? DEFAULT_ICON}
-                      alt={asset}
-                      width={24}
-                      height={24}
+                      src={ASSET_ICON_MAP[selectedAsset] ?? DEFAULT_ICON}
+                      alt={selectedAsset}
+                      width={20}
+                      height={20}
                       className="rounded-full"
                     />
-                    {asset}
+                    {selectedAsset}
                   </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="w-56 rounded-2xl">
+                {ASSET_FILTERS.map((asset) => (
+                  <SelectItem key={asset} value={asset} className="text-sm">
+                    <div className="flex items-center gap-3">
+                      <Image
+                        src={ASSET_ICON_MAP[asset] ?? DEFAULT_ICON}
+                        alt={asset}
+                        width={20}
+                        height={20}
+                        className="rounded-full"
+                      />
+                      {asset}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-xs uppercase tracking-[0.3em] text-muted-foreground/70">
+              Updated every 20m
+            </span>
+          </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="rounded-xl border border-border/40 bg-background/80 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        <div className="space-y-4">
+          <div className="rounded-2xl bg-muted/10 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">
               Highest APY
             </p>
-            <div className="mt-4 flex items-center gap-4">
+            <div className="mt-5 flex items-center gap-4">
               {heroStats.topApyAssets.length > 0 ? (
                 <Image
                   src={getPrimaryAssetIcon(heroStats.topApyAssets)}
                   alt={heroStats.topApySymbol || "Asset"}
-                  width={40}
-                  height={40}
-                  className="rounded-full border border-border/40 bg-background p-1"
+                  width={48}
+                  height={48}
+                  className="rounded-full"
                 />
               ) : (
-                <div className="h-10 w-10 rounded-full border border-dashed border-border/60" />
+                <div className="h-12 w-12 rounded-full bg-muted" />
               )}
               <div>
-                <p className="text-3xl font-semibold">{formatPercent(heroStats.topApy)}</p>
+                <p className="text-4xl font-semibold tracking-tight">
+                  {formatPercent(heroStats.topApy)}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {heroStats.topApyProtocol
                     ? `${heroStats.topApyProtocol} • ${heroStats.topApySymbol}`
@@ -230,28 +238,29 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
             </div>
           </div>
 
-          <div className="rounded-xl border border-border/40 bg-background/80 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              Total TVL
-            </p>
-            <p className="mt-4 text-3xl font-semibold">{formatUsd(heroStats.totalTvl)}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Active liquidity across {selectedAssetLabel} strategies.
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-border/40 bg-background/80 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              Coverage
-            </p>
-            <div className="mt-4 flex gap-6">
-              <div>
-                <p className="text-3xl font-semibold">{heroStats.totalPools}</p>
-                <p className="text-xs text-muted-foreground">Pools</p>
-              </div>
-              <div>
-                <p className="text-3xl font-semibold">{heroStats.totalProtocols}</p>
-                <p className="text-xs text-muted-foreground">Protocols</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-2xl bg-muted/10 p-5">
+              <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                TVL scanned
+              </p>
+              <p className="mt-4 text-3xl font-semibold">{formatUsd(heroStats.totalTvl)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Across {selectedAssetLabel} strategies
+              </p>
+            </div>
+            <div className="rounded-2xl bg-muted/10 p-5">
+              <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                Coverage
+              </p>
+              <div className="mt-4 flex gap-6">
+                <div>
+                  <p className="text-3xl font-semibold">{heroStats.totalPools}</p>
+                  <p className="text-xs text-muted-foreground">Pools</p>
+                </div>
+                <div>
+                  <p className="text-3xl font-semibold">{heroStats.totalProtocols}</p>
+                  <p className="text-xs text-muted-foreground">Protocols</p>
+                </div>
               </div>
             </div>
           </div>

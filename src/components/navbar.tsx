@@ -29,34 +29,34 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6 sm:px-8 lg:px-12">
-          <Link href="/" className="flex items-center space-x-3">
+      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur">
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <Link href="/" className="flex items-center gap-3">
             <Image
               src="/logo.png"
               alt="Yields.to"
-              width={28}
-              height={28}
+              width={32}
+              height={32}
               priority
-              className="h-7 w-7 dark:invert"
+              className="h-8 w-8 dark:invert"
             />
-            <span className="hidden text-xl font-semibold tracking-tight lg:inline">
-              Yields.to
-            </span>
+            <div>
+              <span className="text-base font-semibold leading-tight">Yields.to</span>
+              <p className="text-[11px] uppercase tracking-[0.35em] text-muted-foreground">
+                Plasma
+              </p>
+            </div>
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  size="default"
-                  className="bg-foreground text-background hover:bg-foreground/90"
-                >
+                <Button size="default" className="rounded-full px-4 text-sm font-semibold">
                   Explore
                   <ChevronDown className="ml-2 size-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-48 rounded-xl">
                 <DropdownMenuLabel>Pages</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {NAV_LINKS.map((link) => (
@@ -77,7 +77,7 @@ export function Navbar() {
             </DropdownMenu>
           </div>
         </div>
-      </nav>
+      </header>
       <AddProjectDialog open={addProjectOpen} onOpenChange={setAddProjectOpen} />
     </>
   );

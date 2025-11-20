@@ -56,7 +56,7 @@ export function AddProjectDialog({ open, onOpenChange }: AddProjectDialogProps) 
           apy: "",
         });
         onOpenChange(false);
-        alert("Project submitted successfully! We'll review it shortly.");
+        alert("Project submitted successfully! We will review it shortly.");
       } else {
         alert("Failed to submit project. Please try again.");
       }
@@ -74,7 +74,7 @@ export function AddProjectDialog({ open, onOpenChange }: AddProjectDialogProps) 
         <DialogHeader>
           <DialogTitle>Add Your Project</DialogTitle>
           <DialogDescription>
-            Submit your project details to be listed on Yields.to. We'll review and add it if it meets our criteria.
+            Submit your project details to be listed on Yields.to. We&rsquo;ll review and add it if it meets our criteria.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">

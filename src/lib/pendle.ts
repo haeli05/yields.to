@@ -46,13 +46,6 @@ type PendleMarket = {
   impliedApyPct30D: number | null;
 };
 
-type PendleMarketsResponse = {
-  results: PendleMarket[];
-  total: number;
-  limit: number;
-  skip: number;
-};
-
 export type PendlePool = {
   pool: string;
   project: string;
@@ -96,15 +89,6 @@ type CachePayload = {
 
 const PENDLE_API_BASE = "https://api-v2.pendle.finance/core";
 const PLASMA_CHAIN_ID = 9745;
-
-const safeNumber = (value: unknown): number => {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string" && value.length > 0) {
-    const parsed = Number.parseFloat(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-  return 0;
-};
 
 // Fetch active markets from Pendle API v2
 const fetchPendleMarkets = async (chainId: number): Promise<PendleMarket[]> => {

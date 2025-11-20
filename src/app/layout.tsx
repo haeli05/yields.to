@@ -102,50 +102,49 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
-          <div className="flex min-h-screen flex-col bg-background text-foreground">
-            <Navbar />
-            <div className="flex-1">{children}</div>
-            <footer className="border-t border-border bg-card px-6 py-8">
-            <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 text-sm sm:flex-row sm:items-center sm:justify-between">
-              <nav className="flex flex-wrap items-center gap-4 text-muted-foreground">
-                <Link
-                  href="/"
-                  className="transition-colors hover:text-primary"
-                >
-                  Home
-                </Link>
-                <Link
-                  href="/plasma-yields"
-                  className="transition-colors hover:text-primary"
-                >
-                  Plasma yields
-                </Link>
-                <Link
-                  href="/data-sources"
-                  className="transition-colors hover:text-primary"
-                >
-                  Data sources
-                </Link>
-              </nav>
-              <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
-                <Link
-                  href="/"
-                  className="transition-colors hover:text-primary"
-                >
-                  © {new Date().getFullYear()} yields.to. All rights reserved.
-                </Link>
-                <a
-                  href="https://x.com/yields_to"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-medium text-foreground transition-colors hover:text-primary"
-                >
-                  Follow us on X @yields_to
-                </a>
-              </div>
+          <div className="min-h-screen bg-background text-foreground">
+            <div className="flex min-h-screen flex-col">
+              <Navbar />
+              <div className="flex-1">{children}</div>
+              <footer className="px-6 py-10">
+                <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+                      Yields.to
+                    </p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Intelligence for Plasma-native yield seekers.
+                    </p>
+                  </div>
+                  <nav className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                    <Link href="/" className="transition-colors hover:text-primary">
+                      Home
+                    </Link>
+                    <Link href="/plasma-yields" className="transition-colors hover:text-primary">
+                      Plasma yields
+                    </Link>
+                    <Link href="/chain-stats" className="transition-colors hover:text-primary">
+                      Chain stats
+                    </Link>
+                    <Link href="/data-sources" className="transition-colors hover:text-primary">
+                      Data sources
+                    </Link>
+                  </nav>
+                  <div className="flex flex-col items-start gap-2 text-sm text-muted-foreground sm:items-end">
+                    <a
+                      href="https://x.com/yields_to"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-medium text-foreground transition-colors hover:text-primary"
+                    >
+                      Follow @yields_to
+                    </a>
+                    <p>© {new Date().getFullYear()} Yields.to</p>
+                  </div>
+                </div>
+              </footer>
             </div>
-          </footer>
-        </div>
+          </div>
         </ThemeProvider>
         <Analytics />
       </body>
