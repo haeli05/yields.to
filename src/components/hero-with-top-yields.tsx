@@ -19,6 +19,12 @@ type Pool = {
   assets: string[];
 };
 
+type Insight = {
+  label: string;
+  value: string;
+  detail: string;
+};
+
 const DEFAULT_ICON = "/Plasma.png";
 
 const ASSET_ICON_MAP: Record<string, string> = {
@@ -84,15 +90,7 @@ const formatUsd = (value: number | null | undefined) => {
   return USD_FORMAT.format(value);
 };
 
-const getPrimaryAssetIcon = (assets: string[]) => {
-  const firstWithIcon = assets.find((asset) => ASSET_ICON_MAP[asset]);
-  if (firstWithIcon) {
-    return ASSET_ICON_MAP[firstWithIcon];
-  }
-  return DEFAULT_ICON;
-};
-
-export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
+export function HeroWithTopYields({ pools, insights }: { pools: Pool[]; insights: Insight[] }) {
   const [selectedAsset, setSelectedAsset] = useState<string>(ASSET_FILTERS[0]);
 
   const filteredPools = useMemo(() => {
@@ -151,16 +149,37 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
 
   const selectedAssetLabel = selectedAsset === "All Pools" ? "Plasma" : selectedAsset;
 
+  const insightIcons = [
+    // Network breadth - honeycomb/network icon
+    <svg key="network" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2L2 7l10 5 10-5-10-5Z" />
+      <path d="m2 17 10 5 10-5" />
+      <path d="m2 12 10 5 10-5" />
+    </svg>,
+    // Average APY - percentage icon
+    <svg key="apy" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 5 5 19" />
+      <circle cx="6.5" cy="6.5" r="2.5" />
+      <circle cx="17.5" cy="17.5" r="2.5" />
+    </svg>,
+    // Dominant sector - pie chart icon
+    <svg key="sector" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+      <path d="M22 12A10 10 0 0 0 12 2v10z" />
+    </svg>,
+  ];
+
   return (
-    <section className="rounded-3xl bg-card p-6 shadow-[0_15px_40px_rgba(0,0,0,0.25)] sm:p-10">
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+    <section className="space-y-8">
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+        {/* Left column */}
         <div className="space-y-6">
           <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">
             Live yields
           </p>
           <div className="space-y-4">
             <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl">
-              Find the best yields on Plasma.
+              Find the best yields.
             </h1>
             <p className="text-base text-muted-foreground sm:text-lg">
               Stream live APYs, compare liquidity, and focus on the assets that matter most with a
@@ -168,10 +187,18 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+          <a
+            href="#dashboard"
+            className="group inline-block text-sm font-semibold uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400"
+          >
+            Explore all pools
+            <span className="mt-1 block h-0.5 w-full bg-emerald-600 dark:bg-emerald-400" />
+          </a>
+
+          <div className="flex flex-wrap items-center gap-4 pt-4 text-sm text-muted-foreground">
             <span className="text-xs uppercase tracking-[0.3em]">Focus asset</span>
             <Select value={selectedAsset} onValueChange={setSelectedAsset}>
-              <SelectTrigger className="w-fit rounded-full border-0 bg-muted/20 px-5 py-2 text-sm font-medium">
+              <SelectTrigger className="w-fit rounded-full border-0 bg-muted/30 px-5 py-2 text-sm font-medium dark:bg-muted/20">
                 <SelectValue>
                   <div className="flex items-center gap-3">
                     <Image
@@ -181,7 +208,7 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
                       height={20}
                       className="rounded-full"
                     />
-                    {selectedAsset}
+                    <span className="uppercase tracking-wide">{selectedAsset}</span>
                   </div>
                 </SelectValue>
               </SelectTrigger>
@@ -208,51 +235,62 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="rounded-2xl bg-muted/10 p-5">
+        {/* Right column - Stats */}
+        <div className="space-y-6">
+          {/* Highest APY */}
+          <div>
             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">
               Highest APY
             </p>
-            <div className="mt-5 flex items-center gap-4">
-              {heroStats.topApyAssets.length > 0 ? (
-                <Image
-                  src={getPrimaryAssetIcon(heroStats.topApyAssets)}
-                  alt={heroStats.topApySymbol || "Asset"}
-                  width={48}
-                  height={48}
-                  className="rounded-full"
-                />
-              ) : (
-                <div className="h-12 w-12 rounded-full bg-muted" />
-              )}
-              <div>
-                <p className="text-4xl font-semibold tracking-tight">
-                  {formatPercent(heroStats.topApy)}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {heroStats.topApyProtocol
-                    ? `${heroStats.topApyProtocol} • ${heroStats.topApySymbol}`
-                    : `No live yields for ${selectedAssetLabel}`}
-                </p>
-              </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <p className="text-5xl font-semibold tracking-tight text-emerald-600 dark:text-emerald-400 sm:text-6xl">
+                {formatPercent(heroStats.topApy)}
+              </p>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600 dark:text-emerald-400">
+                <path d="M7 17L17 7" />
+                <path d="M7 7h10v10" />
+              </svg>
             </div>
+            <p className="mt-1 text-sm font-medium uppercase tracking-wide text-muted-foreground">
+              {heroStats.topApyProtocol
+                ? `${heroStats.topApyProtocol} • ${heroStats.topApySymbol}`
+                : `No live yields for ${selectedAssetLabel}`}
+            </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl bg-muted/10 p-5">
-              <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
-                TVL scanned
-              </p>
-              <p className="mt-4 text-3xl font-semibold">{formatUsd(heroStats.totalTvl)}</p>
+          {/* TVL and Coverage row */}
+          <div className="flex gap-10">
+            {/* TVL Scanned */}
+            <div>
+              <div className="flex items-center gap-2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                  <ellipse cx="12" cy="5" rx="9" ry="3" />
+                  <path d="M3 5v14a9 3 0 0 0 18 0V5" />
+                  <path d="M3 12a9 3 0 0 0 18 0" />
+                </svg>
+                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">
+                  TVL scanned
+                </p>
+              </div>
+              <p className="mt-2 text-3xl font-semibold">{formatUsd(heroStats.totalTvl)}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Across {selectedAssetLabel} strategies
+                Across {selectedAssetLabel}
               </p>
             </div>
-            <div className="rounded-2xl bg-muted/10 p-5">
-              <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
-                Coverage
-              </p>
-              <div className="mt-4 flex gap-6">
+
+            {/* Coverage */}
+            <div>
+              <div className="flex items-center gap-2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+                  <path d="M2 12h20" />
+                </svg>
+                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">
+                  Coverage
+                </p>
+              </div>
+              <div className="mt-2 flex gap-4">
                 <div>
                   <p className="text-3xl font-semibold">{heroStats.totalPools}</p>
                   <p className="text-xs text-muted-foreground">Pools</p>
@@ -262,9 +300,31 @@ export function HeroWithTopYields({ pools }: { pools: Pool[] }) {
                   <p className="text-xs text-muted-foreground">Protocols</p>
                 </div>
               </div>
+              <div className="mt-2 flex gap-4">
+                <span className="block h-0.5 w-10 bg-emerald-600 dark:bg-emerald-400" />
+              </div>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Insights row */}
+      <div className="grid gap-6 border-t border-border/50 pt-8 md:grid-cols-3">
+        {insights.map((insight, index) => (
+          <div key={insight.label} className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">
+                {insight.label}
+              </p>
+              <p className="mt-2 text-3xl font-semibold tracking-tight">{insight.value}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{insight.detail}</p>
+              <span className="mt-3 block h-0.5 w-16 bg-emerald-600 dark:bg-emerald-400" />
+            </div>
+            <div className="text-muted-foreground/50">
+              {insightIcons[index]}
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   );

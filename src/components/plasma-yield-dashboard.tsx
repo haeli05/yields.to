@@ -147,7 +147,7 @@ const getProtocolUrl = (project: string, poolUrl: string | null | undefined): st
   return null;
 };
 
-type SortField = "assets" | "project" | "symbol" | "category" | "apy" | "apyPct30d" | "tvlUsd";
+type SortField = "assets" | "project" | "apy" | "tvlUsd" | "apyPct7d";
 type SortDirection = "asc" | "desc" | null;
 
 // Expandable row detail component
@@ -486,21 +486,13 @@ export function PlasmaYieldDashboard({ pools }: { pools: DashboardPool[] }) {
           aValue = a.project;
           bValue = b.project;
           break;
-        case "symbol":
-          aValue = a.symbol;
-          bValue = b.symbol;
-          break;
-        case "category":
-          aValue = a.category;
-          bValue = b.category;
-          break;
         case "apy":
           aValue = a.apy ?? -Infinity;
           bValue = b.apy ?? -Infinity;
           break;
-        case "apyPct30d":
-          aValue = a.apyPct30d ?? -Infinity;
-          bValue = b.apyPct30d ?? -Infinity;
+        case "apyPct7d":
+          aValue = a.apyPct7d ?? -Infinity;
+          bValue = b.apyPct7d ?? -Infinity;
           break;
         case "tvlUsd":
           aValue = a.tvlUsd;
@@ -632,230 +624,193 @@ export function PlasmaYieldDashboard({ pools }: { pools: DashboardPool[] }) {
         </CardContent>
       </Card>
 
-      <Card className="border border-border/60 bg-card">
-        <CardHeader>
-          <CardTitle>Summary</CardTitle>
-          <CardDescription>
-            {filteredAndSortedPools.length} pools · Total TVL {formatUsd(totalTvl)}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-hidden rounded-b-3xl border-t border-border/60">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-border/60 text-sm">
-                <thead className="bg-muted/40">
-                  <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                    <th className="px-6 py-4">
-                      <button
-                        onClick={() => handleSort("assets")}
-                        className="flex items-center gap-1 hover:text-foreground transition-colors"
-                      >
-                        Assets
-                        {sortField === "assets" && sortDirection === "desc" && <ArrowDown className="h-3 w-3" />}
-                        {sortField === "assets" && sortDirection === "asc" && <ArrowUp className="h-3 w-3" />}
-                        {sortField !== "assets" && <ArrowUpDown className="h-3 w-3 opacity-40" />}
-                      </button>
-                    </th>
-                    <th className="px-6 py-4">
-                      <button
-                        onClick={() => handleSort("project")}
-                        className="flex items-center gap-1 hover:text-foreground transition-colors"
-                      >
-                        Project
-                        {sortField === "project" && sortDirection === "desc" && <ArrowDown className="h-3 w-3" />}
-                        {sortField === "project" && sortDirection === "asc" && <ArrowUp className="h-3 w-3" />}
-                        {sortField !== "project" && <ArrowUpDown className="h-3 w-3 opacity-40" />}
-                      </button>
-                    </th>
-                    <th className="px-6 py-4">
-                      <button
-                        onClick={() => handleSort("symbol")}
-                        className="flex items-center gap-1 hover:text-foreground transition-colors"
-                      >
-                        Symbol
-                        {sortField === "symbol" && sortDirection === "desc" && <ArrowDown className="h-3 w-3" />}
-                        {sortField === "symbol" && sortDirection === "asc" && <ArrowUp className="h-3 w-3" />}
-                        {sortField !== "symbol" && <ArrowUpDown className="h-3 w-3 opacity-40" />}
-                      </button>
-                    </th>
-                    <th className="px-6 py-4">
-                      <button
-                        onClick={() => handleSort("category")}
-                        className="flex items-center gap-1 hover:text-foreground transition-colors"
-                      >
-                        Category
-                        {sortField === "category" && sortDirection === "desc" && <ArrowDown className="h-3 w-3" />}
-                        {sortField === "category" && sortDirection === "asc" && <ArrowUp className="h-3 w-3" />}
-                        {sortField !== "category" && <ArrowUpDown className="h-3 w-3 opacity-40" />}
-                      </button>
-                    </th>
-                    <th className="px-6 py-4">
-                      <button
-                        onClick={() => handleSort("apy")}
-                        className="flex items-center gap-1 hover:text-foreground transition-colors"
-                      >
-                        APY
-                        {sortField === "apy" && sortDirection === "desc" && <ArrowDown className="h-3 w-3" />}
-                        {sortField === "apy" && sortDirection === "asc" && <ArrowUp className="h-3 w-3" />}
-                        {sortField !== "apy" && <ArrowUpDown className="h-3 w-3 opacity-40" />}
-                      </button>
-                    </th>
-                    <th className="px-6 py-4">
-                      <button
-                        onClick={() => handleSort("apyPct30d")}
-                        className="flex items-center gap-1 hover:text-foreground transition-colors"
-                      >
-                        30d Δ
-                        {sortField === "apyPct30d" && sortDirection === "desc" && <ArrowDown className="h-3 w-3" />}
-                        {sortField === "apyPct30d" && sortDirection === "asc" && <ArrowUp className="h-3 w-3" />}
-                        {sortField !== "apyPct30d" && <ArrowUpDown className="h-3 w-3 opacity-40" />}
-                      </button>
-                    </th>
-                    <th className="px-6 py-4">
-                      <button
-                        onClick={() => handleSort("tvlUsd")}
-                        className="flex items-center gap-1 hover:text-foreground transition-colors"
-                      >
-                        TVL
-                        {sortField === "tvlUsd" && sortDirection === "desc" && <ArrowDown className="h-3 w-3" />}
-                        {sortField === "tvlUsd" && sortDirection === "asc" && <ArrowUp className="h-3 w-3" />}
-                        {sortField !== "tvlUsd" && <ArrowUpDown className="h-3 w-3 opacity-40" />}
-                      </button>
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                      Risk
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                      Link
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60">
-                  {filteredAndSortedPools.map((pool) => {
-                    const isExpanded = expandedRow === pool.id;
-                    return (
-                      <React.Fragment key={pool.id}>
-                        <tr
-                          onClick={() => setExpandedRow(isExpanded ? null : pool.id)}
-                          className="cursor-pointer transition-colors hover:bg-muted/30"
+      <div className="overflow-hidden rounded-xl border border-border/40">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b border-border/40 text-left text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                <th className="px-6 py-5">
+                  <button
+                    onClick={() => handleSort("assets")}
+                    className="flex items-center gap-1.5 transition-colors hover:text-foreground"
+                  >
+                    Asset
+                    {sortField === "assets" && sortDirection === "desc" && <ArrowDown className="h-3 w-3" />}
+                    {sortField === "assets" && sortDirection === "asc" && <ArrowUp className="h-3 w-3" />}
+                    {sortField !== "assets" && <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                  </button>
+                </th>
+                <th className="px-6 py-5">
+                  <button
+                    onClick={() => handleSort("project")}
+                    className="flex items-center gap-1.5 transition-colors hover:text-foreground"
+                  >
+                    Protocol
+                    {sortField === "project" && sortDirection === "desc" && <ArrowDown className="h-3 w-3" />}
+                    {sortField === "project" && sortDirection === "asc" && <ArrowUp className="h-3 w-3" />}
+                    {sortField !== "project" && <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                  </button>
+                </th>
+                <th className="px-6 py-5">
+                  <button
+                    onClick={() => handleSort("apy")}
+                    className="flex items-center gap-1.5 transition-colors hover:text-foreground"
+                  >
+                    APY
+                    {sortField === "apy" && sortDirection === "desc" && <ArrowDown className="h-3 w-3" />}
+                    {sortField === "apy" && sortDirection === "asc" && <ArrowUp className="h-3 w-3" />}
+                    {sortField !== "apy" && <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                  </button>
+                </th>
+                <th className="px-6 py-5">
+                  <button
+                    onClick={() => handleSort("tvlUsd")}
+                    className="flex items-center gap-1.5 transition-colors hover:text-foreground"
+                  >
+                    TVL
+                    {sortField === "tvlUsd" && sortDirection === "desc" && <ArrowDown className="h-3 w-3" />}
+                    {sortField === "tvlUsd" && sortDirection === "asc" && <ArrowUp className="h-3 w-3" />}
+                    {sortField !== "tvlUsd" && <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                  </button>
+                </th>
+                <th className="px-6 py-5">
+                  <button
+                    onClick={() => handleSort("apyPct7d")}
+                    className="flex items-center gap-1.5 transition-colors hover:text-foreground"
+                  >
+                    7D Change
+                    {sortField === "apyPct7d" && sortDirection === "desc" && <ArrowDown className="h-3 w-3" />}
+                    {sortField === "apyPct7d" && sortDirection === "asc" && <ArrowUp className="h-3 w-3" />}
+                    {sortField !== "apyPct7d" && <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                  </button>
+                </th>
+                <th className="px-6 py-5 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/40">
+              {filteredAndSortedPools.map((pool) => {
+                const isExpanded = expandedRow === pool.id;
+                const primaryAsset = pool.assets[0] || pool.symbol;
+                const iconPath = ASSET_ICON_MAP[primaryAsset];
+                const change7d = pool.apyPct7d;
+                const isPositiveChange = change7d != null && change7d > 0;
+                const isNegativeChange = change7d != null && change7d < 0;
+
+                return (
+                  <React.Fragment key={pool.id}>
+                    <tr
+                      onClick={() => setExpandedRow(isExpanded ? null : pool.id)}
+                      className="cursor-pointer transition-colors hover:bg-muted/20"
+                    >
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedRow(isExpanded ? null : pool.id);
+                            }}
+                            className="flex h-6 w-6 items-center justify-center text-lg text-muted-foreground transition-colors hover:text-foreground"
+                            aria-label={isExpanded ? "Collapse row" : "Expand row"}
+                          >
+                            {isExpanded ? "−" : "+"}
+                          </button>
+                          {iconPath ? (
+                            <Image
+                              src={iconPath}
+                              alt={primaryAsset}
+                              width={28}
+                              height={28}
+                              className="rounded-full"
+                            />
+                          ) : (
+                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-medium">
+                              {primaryAsset.charAt(0)}
+                            </div>
+                          )}
+                          <span className="font-medium">{pool.symbol}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5 text-muted-foreground">{pool.project}</td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-medium">{formatPercent(pool.apy)}</span>
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-emerald-600 dark:text-emerald-400"
+                          >
+                            <path d="M7 17L17 7" />
+                            <path d="M7 7h10v10" />
+                          </svg>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5 font-medium">{formatUsd(pool.tvlUsd)}</td>
+                      <td className="px-6 py-5">
+                        <span
+                          className={
+                            isPositiveChange
+                              ? "font-medium text-emerald-600 dark:text-emerald-400"
+                              : isNegativeChange
+                                ? "text-muted-foreground"
+                                : "text-muted-foreground"
+                          }
                         >
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setExpandedRow(isExpanded ? null : pool.id);
-                                }}
-                                className="text-muted-foreground transition-colors hover:text-foreground"
-                                aria-label={isExpanded ? "Collapse row" : "Expand row"}
-                              >
-                                {isExpanded ? (
-                                  <ChevronUp className="h-4 w-4" />
-                                ) : (
-                                  <ChevronDown className="h-4 w-4" />
-                                )}
-                              </button>
-                              <div className="flex flex-wrap items-center gap-2">
-                                {pool.assets.map((asset) => {
-                                  const iconPath = ASSET_ICON_MAP[asset];
-                                  return iconPath ? (
-                                    <div key={asset} className="flex items-center gap-1.5">
-                                      <Image
-                                        src={iconPath}
-                                        alt={asset}
-                                        width={20}
-                                        height={20}
-                                        className="rounded-full"
-                                      />
-                                      <span className="text-sm font-medium">{asset}</span>
-                                    </div>
-                                  ) : (
-                                    <Badge key={asset} variant="secondary" className="bg-muted/60">
-                                      {asset}
-                                    </Badge>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">{pool.project}</td>
-                          <td className="px-6 py-4">{pool.symbol}</td>
-                          <td className="px-6 py-4">
-                            <Badge variant="outline" className="border-dashed">
-                              {pool.category}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              {formatPercent(pool.apy)}
-                              {(() => {
-                                const trend = getTrendIndicator(pool.apyPct7d);
-                                if (!trend) return null;
-                                const Icon = trend.icon;
-                                return (
-                                  <span title={trend.label}>
-                                    <Icon className={`h-3.5 w-3.5 ${trend.color}`} />
-                                  </span>
-                                );
-                              })()}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">{formatPercent(pool.apyPct30d)}</td>
-                          <td className="px-6 py-4">{formatUsd(pool.tvlUsd)}</td>
-                          <td className="px-6 py-4">
-                            <Badge
-                              variant={getRiskBadge(pool.tvlUsd, pool.il7d, pool.project).variant}
-                              className="text-xs"
+                          {change7d != null
+                            ? `${isPositiveChange ? "+" : ""}${change7d.toFixed(1)}%`
+                            : "—"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-5">
+                        {(() => {
+                          const url = getProtocolUrl(pool.project, pool.url);
+                          return url ? (
+                            <Link
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-sm font-semibold uppercase tracking-wide text-foreground transition-colors hover:text-emerald-600 dark:hover:text-emerald-400"
                             >
-                              {getRiskBadge(pool.tvlUsd, pool.il7d, pool.project).label}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4">
-                            {(() => {
-                              const url = getProtocolUrl(pool.project, pool.url);
-                              return url ? (
-                                <Link
-                                  href={url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-                                >
-                                  {pool.url ? "Visit Pool" : "Visit Protocol"}
-                                  <ExternalLink className="h-3.5 w-3.5" />
-                                </Link>
-                              ) : (
-                                <span className="text-sm text-muted-foreground">—</span>
-                              );
-                            })()}
-                          </td>
-                        </tr>
-                        {isExpanded && (
-                          <tr>
-                            <td colSpan={9} className="p-0">
-                              <PoolDetailPanel pool={pool} />
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                  {filteredAndSortedPools.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={9}
-                        className="px-6 py-10 text-center text-sm text-muted-foreground"
-                      >
-                        No pools found. Adjust your filters or search criteria.
+                              View Pool
+                            </Link>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">—</span>
+                          );
+                        })()}
                       </td>
                     </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                    {isExpanded && (
+                      <tr>
+                        <td colSpan={6} className="p-0">
+                          <PoolDetailPanel pool={pool} />
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+              {filteredAndSortedPools.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="px-6 py-12 text-center text-sm text-muted-foreground"
+                  >
+                    No pools found. Adjust your filters or search criteria.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

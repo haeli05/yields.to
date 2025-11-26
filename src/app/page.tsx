@@ -308,22 +308,8 @@ export default async function Home() {
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 py-12 sm:px-6 lg:px-10">
-      <HeroWithTopYields pools={heroPools} />
-      <section className="grid gap-4 md:grid-cols-3">
-        {insights.map((insight, index) => (
-          <div key={insight.label} className="rounded-3xl bg-card p-6 shadow-[0_12px_32px_rgba(0,0,0,0.2)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">
-              {insight.label}
-            </p>
-            <p className="mt-3 text-3xl font-semibold tracking-tight">{insight.value}</p>
-            <p className="mt-2 text-sm text-muted-foreground">{insight.detail}</p>
-            <p className="mt-6 text-[11px] font-mono uppercase tracking-[0.3em] text-muted-foreground">
-              {String(index + 1).padStart(2, "0")}
-            </p>
-          </div>
-        ))}
-      </section>
-      <section className="space-y-6">
+      <HeroWithTopYields pools={heroPools} insights={insights} />
+      <section id="dashboard" className="space-y-6">
         <div className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">
             Live Plasma data
